@@ -1,0 +1,491 @@
+---
+title: "Descriptive Analytics of Boston 311, year 2024"
+author: "Joël R. Pradines, Ph.D."
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    theme: cosmo
+    math: true
+    embed-resources: true
+bibliography: references.bib
+nocite: |
+  @*
+---
+
+```{r}
+#| label: setup
+#| echo: false
+#| message: false
+#| warning: false
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(here)
+library(tidyr)
+```
+
+```{r}
+#| label: ingest
+#| message: false
+#| warning: false
+#| echo: false
+
+boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
+```
+
+# 1. Data Cleaning
+
+```{r}
+#| label: data-cleaning
+#| message: false
+#| warning: false
+#| echo: false
+
+boston_clean <- boston_311 %>%
+  # Isolate completed work orders
+  filter(case_status == "Closed", !is.na(closed_dt), !is.na(open_dt)) %>%
+  mutate(
+    # Calculate exact resolution time
+    resolution_days = as.numeric(difftime(closed_dt, open_dt, units = "days")),
+    
+    # Extract temporal features for seasonality and scheduling analysis
+    open_month = month(open_dt, label = TRUE, abbr = TRUE),
+    open_wday = wday(open_dt, label = TRUE, abbr = TRUE, week_start = 1), # Monday = 1
+    open_hour = hour(open_dt)
+  ) %>%
+  # Remove data entry errors (negative resolution times)
+  filter(resolution_days >= 0)
+
+cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
+```
+
+```{r}
+#| label: isolate-open-cases
+#| message: false
+#| warning: false
+#| echo: false
+
+boston_open <- boston_311 %>%
+  filter(case_status == "Open" | is.na(closed_dt)) %>%
+  mutate(
+    open_month = month(open_dt, label = TRUE, abbr = TRUE),
+    # Calculate ticket age as of the end of the 2024 calendar year
+    days_open_at_yearend = as.numeric(difftime(as.POSIXct("2024-12-31 23:59:59"), open_dt, units = "days"))
+  )
+
+cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
+cat("--- Age of Open Tickets (in days) at the end of 2024 ---\n")
+summary(boston_open$days_open_at_yearend)
+```
+
+
+# 2. Resolution Time
+
+A common pitfall in operational reporting is relying on the average (mean) time to close a ticket. In property maintenance, completion times are rarely normally distributed. They exhibit a severe right skew: most tasks are completed quickly, but a handful of capital-intensive or disputed tasks can remain open for months. 
+
+When a long tail exists, the mean is artificially inflated, making the operational baseline look much worse than it actually is. The median is the mathematically sound metric for setting Service Level Agreements (SLAs).
+
+```{r}
+#| label: resolution-distribution
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+
+# Calculate the portfolio-level summary stats
+res_summary <- boston_clean %>%
+  summarise(
+    Mean = mean(resolution_days, na.rm = TRUE),
+    Median = median(resolution_days, na.rm = TRUE)
+  )
+
+# Plot the distribution focusing on the first 60 days
+ggplot(boston_clean, aes(x = resolution_days)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "white", alpha = 0.8) +
+  geom_vline(xintercept = res_summary$Mean, color = "darkred", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = res_summary$Median, color = "black", linetype = "solid", linewidth = 1) +
+  # Zooming the x-axis to 60 days to see the bulk of the curve, though the data extends much further
+  coord_cartesian(xlim = c(0, 60)) + 
+  annotate("text", x = res_summary$Mean + 1, y = 20000, 
+           label = paste("Mean:\n", round(res_summary$Mean, 1), "days"), 
+           color = "darkred", hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = res_summary$Median + 1, y = 25000, 
+           label = paste("Median:\n", round(res_summary$Median, 1), "days"), 
+           color = "black", hjust = 0, size = 4, fontface = "bold") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Maintenance Resolution Times",
+    subtitle = "The long right tail pulls the average significantly higher than the typical (median) experience.",
+    x = "Days to Close",
+    y = "Volume of Work Orders"
+  )
+```
+
+```{r}
+#| label: resolution-density-log
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+
+library(scales) # For elegant axis breaks and labels
+
+# Calculate the portfolio-level summary stats (if not already in a previous chunk)
+res_summary <- boston_clean %>%
+  summarise(
+    Mean = mean(resolution_days, na.rm = TRUE),
+    Median = median(resolution_days, na.rm = TRUE)
+  )
+
+ggplot(boston_clean, aes(x = resolution_days)) +
+  geom_density(fill = "steelblue", color = "darkblue", alpha = 0.5) +
+  geom_vline(xintercept = res_summary$Mean, color = "darkred", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = res_summary$Median, color = "black", linetype = "solid", linewidth = 1) +
+  # log1p transformation safely handles 0-day resolutions
+  scale_x_continuous(
+    trans = "log1p",
+    breaks = c(0, 1, 3, 10, 30, 100, 365),
+    labels = label_comma()
+  ) +
+  # Setting y = Inf and adjusting vjust pins the labels to the top of the plot
+  annotate("text", x = res_summary$Mean, y = Inf, 
+           label = paste("Mean:\n", round(res_summary$Mean, 1), "days"), 
+           color = "darkred", hjust = -0.2, vjust = 1.5, size = 4, fontface = "bold") +
+  annotate("text", x = res_summary$Median, y = Inf, 
+           label = paste("Median:\n", round(res_summary$Median, 1), "days"), 
+           color = "black", hjust = 1.2, vjust = 1.5, size = 4, fontface = "bold") +
+  theme_minimal() +
+  labs(
+    title = "Density of Maintenance Resolution Times (Log Scale)",
+    subtitle = "A log1p scale stretches the immediate closures while revealing the true span of the multi-month right tail.",
+    x = "Days to Close (Log Scale)",
+    y = "Density of Work Orders"
+  )
+```
+
+## 3. SLA Compliance Analytics
+
+Absolute resolution times only tell half the story. To truly evaluate vendor and operational performance, we must compare the completion timestamp (`closed_dt`) against the algorithmic deadline (`sla_target_dt`). 
+
+This section isolates the subset of closed requests with defined service level agreements. We calculate a compliance rate (the percentage of tickets closed on or before their target date) grouped by the top service categories.
+
+### The SLA Delta Distribution (Lateness/Earliness)
+
+Before calculating aggregated compliance rates, we analyze the distribution of the SLA Delta (Actual Resolution Time minus SLA Target Time). 
+
+A value of `0` means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values indicate the ticket was overdue. Looking at this continuous distribution reveals the variance and behavioral clustering around the algorithmic deadline.
+
+```{r}
+#| label: sla-delta-distribution
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+
+# Calculate the exact delta in days
+sla_delta_data <- boston_clean %>%
+  filter(!is.na(sla_target_dt), subject != "Animal Control") %>%
+  mutate(
+    sla_delta_days = as.numeric(difftime(closed_dt, sla_target_dt, units = "days")),
+    # Categorize for the plot fill
+    compliance_status = ifelse(sla_delta_days <= 0, "On Time (Early)", "Overdue (Late)")
+  )
+
+# Plot the distribution of the delta
+ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
+  # boundary = 0 added here to prevent overlapping bins at zero
+  geom_histogram(binwidth = 1, boundary = 0, color = "white", alpha = 0.8) +
+  # Add the hard SLA deadline reference line
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 1) +
+  scale_fill_manual(values = c("On Time (Early)" = "steelblue", "Overdue (Late)" = "darkred")) +
+  # Zoom the x-axis to a relevant operational window (e.g., 30 days early to 30 days late)
+  coord_cartesian(xlim = c(-30, 30)) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of SLA Delta",
+    subtitle = "The variance of actual closure times relative to their expected deadlines.",
+    x = "SLA Delta (Days)",
+    y = "Volume of Work Orders",
+    fill = "Status"
+  ) +
+  theme(legend.position = "top")
+```
+
+### The Detective Step: Hunting the Bumps
+
+To illustrate the investigative process, we should insert a step *before* we show them the faceted plots. We need to ask the data: "What factors are driving these isolated bumps?" 
+
+We can do this by rounding up a few "suspects"—categorical features like the Department (`subject`), the Day of the Week the ticket was opened (`open_wday`), and the Source of the report (`source`). By calculating the summary statistics of the SLA Delta for each group, we can see which factor actually explains the erratic behavior.
+
+Here is a Quarto chunk that acts as our interrogation room. 
+
+### Feature Dependency Testing (Categorical vs. Continuous)
+
+To systematically identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., Department, Neighborhood, Day of the Week) and the continuous `sla_delta_days` variable.
+
+Using linear modeling (mathematically equivalent to a One-Way ANOVA for single categorical predictors), we calculate the Adjusted $R^2$ for each factor. This serves as our effect size ($\eta^2$), allowing us to rank the features by the percentage of variance they explain in the SLA Delta, circumventing the $p$-value inflation inherent in large datasets.
+
+```{r}
+#| label: feature-dependency-test
+#| echo: false
+#| warning: false
+#| message: false
+
+library(purrr)
+library(broom)
+
+# 1. Define the categorical factors we want to interrogate
+factors_to_test <- c("subject", "reason", "type", "source", "neighborhood", "open_wday")
+
+# 2. Function to run ANOVA/LM and extract the effect size (Adj R-Squared) and p-value
+test_dependency <- function(feature_name, data) {
+  # Build formula: sla_delta_days ~ feature
+  formula_str <- paste("sla_delta_days ~", feature_name)
+  
+  # Fit model
+  model <- lm(as.formula(formula_str), data = data)
+  model_summary <- summary(model)
+  
+  # Extract metrics
+  tibble(
+    Factor = feature_name,
+    Adj_R_Squared = model_summary$adj.r.squared,
+    # F-statistic p-value calculation
+    P_Value = pf(model_summary$fstatistic[1], 
+                 model_summary$fstatistic[2], 
+                 model_summary$fstatistic[3], 
+                 lower.tail = FALSE)
+  )
+}
+
+# 3. Map the function across all factors and rank by explanatory power
+dependency_results <- map_df(factors_to_test, ~test_dependency(.x, sla_delta_data)) %>%
+  arrange(desc(Adj_R_Squared)) %>%
+  mutate(
+    # Format for clean reporting
+    Variance_Explained = scales::percent(Adj_R_Squared, accuracy = 0.01),
+    P_Value = format(P_Value, scientific = TRUE, digits = 3)
+  ) %>%
+  select(Factor, Variance_Explained, Adj_R_Squared, P_Value)
+
+cat("--- Factor Dependency Ranking (Effect Size) ---\n")
+print(dependency_results)
+```
+
+### SLA Delta by Department
+
+The aggregated SLA delta distribution contains multiple peaks (multi-modal). By faceting the data by the top service subjects, we can isolate the operational workflows of individual departments. 
+
+This reveals that the "bumps" on the far left of the portfolio view are driven by specific departments closing tickets consistently ahead of long-term SLAs, while other departments struggle tightly against shorter deadlines.
+
+```{r}
+#| label: sla-delta-faceted
+#| echo: false
+#| warning: false
+#| fig-width: 10
+#| fig-height: 8
+
+# Identify the top 6 departments by volume to keep the grid readable
+top_subjects <- sla_delta_data %>%
+  count(subject, sort = TRUE) %>%
+  slice_head(n = 6) %>%
+  pull(subject)
+
+# Faceted histogram
+ggplot(sla_delta_data %>% filter(subject %in% top_subjects), 
+       aes(x = sla_delta_days, fill = compliance_status)) +
+  # boundary = 0 aligns the bins to start/stop exactly on integers
+  geom_histogram(binwidth = 1, boundary = 0, color = "white", alpha = 0.8) +
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 0.8) +
+  scale_fill_manual(values = c("On Time (Early)" = "steelblue", "Overdue (Late)" = "darkred")) +
+  # Zooming slightly to cut out extreme multi-month outliers and focus on the main clusters
+  coord_cartesian(xlim = c(-35, 15)) +
+  facet_wrap(~ subject, scales = "free_y", ncol = 2) +
+  theme_minimal() +
+  labs(
+    title = "SLA Delta Distributions by Top Departments",
+    subtitle = "Setting boundary = 0 cleanly splits on-time vs overdue. Facets reveal departmental 'bumps'.",
+    x = "SLA Delta (Days)",
+    y = "Volume of Work Orders",
+    fill = "Status"
+  ) +
+  theme(
+    legend.position = "top",
+    strip.text = element_text(face = "bold", size = 10)
+  )
+```
+
+## Factors Driving Variance in Timely Compliance
+
+To systematically identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography) and the continuous SLA Delta. 
+
+Because the dataset is very large ($N > 130,000$) and contains right-tail outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
+
+### The Mathematical Approach: Volume-Weighted K-S Distance
+
+To correctly capture the true operational reality, we abandon variance and compare the **Empirical Cumulative Distribution Functions (ECDFs)** using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.
+
+
+First, we define $F_{global}(x)$ as the ECDF of the SLA Delta for the entire city-wide portfolio. For any given factor (e.g., Department), we split the data into $K$ individual levels (subgroups). We then define $F_k(x)$ as the ECDF for a specific subgroup $k$.
+
+The standard K-S statistic $D_k$ measures the maximum absolute vertical distance between the subgroup's ECDF and the global ECDF:
+
+$$D_k = \sup_x |F_k(x) - F_{global}(x)|$$
+
+This outputs a bounded value between $0$ (identical distributions) and $1$ (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to extreme outliers.
+
+```{r}
+#| label: ks-statistic-explanation
+#| echo: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 6
+
+# 1. Identify a "Goldilocks" subgroup (high volume, moderate D_k around 0.35)
+global_dist <- sla_delta_data$sla_delta_days
+
+illustrative_group <- sla_delta_data %>%
+  group_by(type) %>%
+  filter(n() > 5000) %>% # High volume guarantees a smooth, representative curve
+  summarise(
+    ks_stat = suppressWarnings(ks.test(sla_delta_days, global_dist)$statistic),
+    .groups = "drop"
+  ) %>%
+  # Target a D_k of ~0.35 for the perfect visual gap without falling off-screen
+  mutate(diff_from_target = abs(ks_stat - 0.35)) %>%
+  arrange(diff_from_target) %>%
+  slice(1)
+
+max_type_name <- illustrative_group$type
+max_type_dist <- sla_delta_data %>% filter(type == max_type_name) %>% pull(sla_delta_days)
+
+# 2. Calculate the exact point of maximum vertical distance
+x_vals <- sort(unique(c(global_dist, max_type_dist)))
+ecdf_global_vals <- ecdf(global_dist)(x_vals)
+ecdf_max_vals <- ecdf(max_type_dist)(x_vals)
+
+diffs <- abs(ecdf_global_vals - ecdf_max_vals)
+max_idx <- which.max(diffs)
+
+x_max_diff <- x_vals[max_idx]
+y_global <- ecdf_global_vals[max_idx]
+y_max <- ecdf_max_vals[max_idx]
+max_d_stat <- diffs[max_idx]
+
+# 3. Create the dataset for plotting
+plot_data <- sla_delta_data %>%
+  mutate(Curve = "Global Baseline") %>%
+  bind_rows(
+    sla_delta_data %>%
+      filter(type == max_type_name) %>%
+      mutate(Curve = paste0("Subgroup: ", max_type_name))
+  )
+
+# 4. Generate the explanatory plot
+ggplot(plot_data, aes(x = sla_delta_days, color = Curve)) +
+  stat_ecdf(linewidth = 1) +
+  # Add the vertical segment illustrating D_k
+  annotate("segment", x = x_max_diff, xend = x_max_diff,
+           y = y_global, yend = y_max,
+           color = "darkred", linewidth = 1.2, 
+           arrow = arrow(ends = "both", length = unit(0.1, "inches"))) +
+  # Annotate the exact D_k value mathematically
+  annotate("text", x = x_max_diff + 2, y = mean(c(y_global, y_max)),
+           label = paste0("D[k] == ", round(max_d_stat, 3)), parse = TRUE,
+           color = "darkred", hjust = 0, size = 5, fontface = "bold") +
+  # Reference line for the SLA deadline (0 days)
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", alpha = 0.5) +
+  scale_color_manual(values = c("darkgray", "steelblue")) +
+  # Lock the zoom back to the critical operational window
+  coord_cartesian(xlim = c(-30, 30)) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    title = "Visualizing the Kolmogorov-Smirnov Statistic",
+    subtitle = "The K-S statistic (D_k) represents the maximum absolute vertical distance between the cumulative distributions.",
+    x = "SLA Delta (Days)",
+    y = "Cumulative Proportion of Tickets Closed",
+    color = NULL
+  ) +
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 11, face = "bold")
+  )
+```
+
+To evaluate the *overall* explanatory power of the categorical factor, we must aggregate the $D_k$ scores of its levels. A simple average would mathematically equate a queue with $10$ tickets to a queue with $10,000$ tickets. Therefore, we calculate the **Volume-Weighted K-S Score** ($D_{weighted}$) by weighting each subgroup's K-S statistic by its proportional volume:
+
+$$D_{weighted} = \sum_{k=1}^{K} \left( \frac{n_k}{N} \right) D_k$$
+
+Where $n_k$ is the total number of work orders in subgroup $k$, and $N$ is the total volume across all subgroups. This penalizes noisy variance from tiny subgroups and rewards factors where massive subsets of work fundamentally deviate from the global baseline.
+
+### Operational Divide: Task vs. Geography
+
+When we apply this non-parametric ranking to all organizational, task-based, and geographic features, a stark operational divide emerges:
+
+* **Task & Routing Govern Compliance:** The top five drivers of distributional shift (`type`, `queue`, `reason`, `subject`, and `department`) are entirely organizational. The physical nature of the request and the specific digital bucket it is routed to fundamentally alter the timeline.
+* **Geographic Equity:** Spatial features (`precinct`, `ward`, `zipcode`, and municipal districts) rank uniformly at the bottom. This mathematically proves geographic equity; a property's location does not dictate the operational urgency or speed of its service.
+
+```{r}
+#| label: feature-dependency-ks
+#| echo: false
+#| warning: false
+#| message: false
+
+library(purrr)
+library(dplyr)
+
+# Isolate the global baseline distribution
+global_dist <- sla_delta_data$sla_delta_days
+total_n <- nrow(sla_delta_data)
+
+factors_to_test <- c("subject", "reason", "type", "queue", "department", 
+                     "fire_district", "pwd_district", "city_council_district", 
+                     "police_district", "neighborhood", "neighborhood_services_district", 
+                     "ward", "precinct", "location_zipcode")
+
+# Function to calculate the Weighted K-S Distance and extract p-values
+calc_weighted_ks <- function(factor_name, data, global_dist, total_n) {
+  
+  data %>%
+    group_split(!!sym(factor_name)) %>%
+    map_dfr(function(df) {
+      level_dist <- df$sla_delta_days
+      level_n <- nrow(df)
+      
+      # Skip virtually empty levels to prevent test errors
+      if(level_n < 5) return(tibble(level_n = level_n, ks_stat = 0, p_val = 1))
+      
+      # Suppress warnings for expected ties
+      ks_res <- suppressWarnings(ks.test(level_dist, global_dist))
+      
+      tibble(
+        level_n = level_n,
+        ks_stat = ks_res$statistic,
+        p_val = ks_res$p.value
+      )
+    }) %>%
+    summarise(
+      Factor = factor_name,
+      Weighted_KS_Score = sum(ks_stat * (level_n / total_n)),
+      Median_P_Value = median(p_val)
+    )
+}
+
+# Map across all factors and rank
+ks_results <- map_dfr(factors_to_test, ~calc_weighted_ks(.x, sla_delta_data, global_dist, total_n)) %>%
+  arrange(desc(Weighted_KS_Score)) %>%
+  mutate(
+    Weighted_KS_Score = round(Weighted_KS_Score, 4),
+    Median_P_Value = format(Median_P_Value, scientific = TRUE, digits = 3)
+  )
+
+cat("--- Factor Dependency Ranking (Weighted K-S Distance) ---\n")
+print(ks_results)
+```
