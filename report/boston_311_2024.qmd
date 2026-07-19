@@ -217,13 +217,6 @@ ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
   theme(legend.position = "top")
 ```
 
-### The Detective Step: Hunting the Bumps
-
-To illustrate the investigative process, we should insert a step *before* we show them the faceted plots. We need to ask the data: "What factors are driving these isolated bumps?" 
-
-We can do this by rounding up a few "suspects"—categorical features like the Department (`subject`), the Day of the Week the ticket was opened (`open_wday`), and the Source of the report (`source`). By calculating the summary statistics of the SLA Delta for each group, we can see which factor actually explains the erratic behavior.
-
-Here is a Quarto chunk that acts as our interrogation room. 
 
 ### Feature Dependency Testing (Categorical vs. Continuous)
 
@@ -352,12 +345,11 @@ global_dist <- sla_delta_data$sla_delta_days
 
 illustrative_group <- sla_delta_data %>%
   group_by(type) %>%
-  filter(n() > 5000) %>% # High volume guarantees a smooth, representative curve
+  filter(n() > 5000) %>% 
   summarise(
     ks_stat = suppressWarnings(ks.test(sla_delta_days, global_dist)$statistic),
     .groups = "drop"
   ) %>%
-  # Target a D_k of ~0.35 for the perfect visual gap without falling off-screen
   mutate(diff_from_target = abs(ks_stat - 0.35)) %>%
   arrange(diff_from_target) %>%
   slice(1)
@@ -378,13 +370,17 @@ y_global <- ecdf_global_vals[max_idx]
 y_max <- ecdf_max_vals[max_idx]
 max_d_stat <- diffs[max_idx]
 
+# Define dynamic labels to map math notation to the data
+global_label <- "F_global : Global Baseline"
+subgroup_label <- paste0("F_k : '", max_type_name, "' (Factor: type)")
+
 # 3. Create the dataset for plotting
 plot_data <- sla_delta_data %>%
-  mutate(Curve = "Global Baseline") %>%
+  mutate(Curve = global_label) %>%
   bind_rows(
     sla_delta_data %>%
       filter(type == max_type_name) %>%
-      mutate(Curve = paste0("Subgroup: ", max_type_name))
+      mutate(Curve = subgroup_label)
   )
 
 # 4. Generate the explanatory plot
@@ -401,14 +397,15 @@ ggplot(plot_data, aes(x = sla_delta_days, color = Curve)) +
            color = "darkred", hjust = 0, size = 5, fontface = "bold") +
   # Reference line for the SLA deadline (0 days)
   geom_vline(xintercept = 0, color = "black", linetype = "dashed", alpha = 0.5) +
-  scale_color_manual(values = c("darkgray", "steelblue")) +
+  # Map colors directly to the new dynamic labels
+  scale_color_manual(values = setNames(c("darkgray", "steelblue"), c(global_label, subgroup_label))) +
   # Lock the zoom back to the critical operational window
   coord_cartesian(xlim = c(-30, 30)) +
   scale_y_continuous(labels = scales::percent) +
   theme_minimal() +
   labs(
     title = "Visualizing the Kolmogorov-Smirnov Statistic",
-    subtitle = "The K-S statistic (D_k) represents the maximum absolute vertical distance between the cumulative distributions.",
+    subtitle = "The D_k statistic represents the maximum absolute vertical distance between the global distribution\nand a specific subgroup (in this example, the 'Parking Enforcement' level of the 'type' factor).",
     x = "SLA Delta (Days)",
     y = "Cumulative Proportion of Tickets Closed",
     color = NULL
@@ -485,7 +482,79 @@ ks_results <- map_dfr(factors_to_test, ~calc_weighted_ks(.x, sla_delta_data, glo
     Weighted_KS_Score = round(Weighted_KS_Score, 4),
     Median_P_Value = format(Median_P_Value, scientific = TRUE, digits = 3)
   )
+```
 
-cat("--- Factor Dependency Ranking (Weighted K-S Distance) ---\n")
-print(ks_results)
+```{r}
+#| label: tbl-factor-ranking
+#| tbl-cap: "Factor Dependency Ranking (Weighted K-S Distance)"
+#| echo: false
+#| warning: false
+
+library(knitr)
+
+# Generate the formal Quarto table from our previous ks_results tibble
+kable(
+  ks_results, 
+  col.names = c("Factor", "Weighted K-S Score", "Median P-Value"),
+  align = c('l', 'c', 'c')
+)
+```
+
+## Return to the Histogram visualization
+
+While the K-S statistic is mathematically bulletproof against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).
+
+By coloring the overall SLA Delta histogram by the top digital queues, we visually validate what the K-S test just measured. The distinct colors do not overlap uniformly; rather, they form separate, distinct operational distributions spanning from early completions to massive late backlogs.
+
+```{r}
+#| label: fig-queue-histogram
+#| echo: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 7
+
+# 1. Isolate the top 4 queues to compare against the global background
+top_queues <- sla_delta_data %>%
+  count(queue, sort = TRUE) %>%
+  slice_head(n = 4) %>%
+  pull(queue)
+
+# 2. Group all remaining data into a global baseline category
+plot_data_queue <- sla_delta_data %>%
+  mutate(
+    queue_grouped = ifelse(queue %in% top_queues, queue, "All Other Queues"),
+    # Convert to factor and put "All Other Queues" first so it renders at the bottom of the stack
+    queue_grouped = factor(queue_grouped, levels = c("All Other Queues", top_queues))
+  )
+
+# 3. Generate the stacked histogram
+ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
+  geom_histogram(binwidth = 1, boundary = 0, position = "stack", color = "white", linewidth = 0.2, alpha = 0.9) +
+  # Add the SLA deadline reference line
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 1) +
+  # Zoom tightly to the central mass for higher resolution
+  coord_cartesian(xlim = c(-15, 15)) +
+  # Manually assign colors: neutral grey for the baseline, vibrant colors for the top 4
+  scale_fill_manual(
+    values = c(
+      "All Other Queues" = "grey80",
+      setNames(c("#E41A1C", "#377EB8", "#4DAF4A", "#FF7F00"), top_queues)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "SLA Delta Histogram by Top Queues",
+    subtitle = "Visualizing the K-S finding: Top queues form distinct distributions against the global baseline.",
+    x = "SLA Delta (Days)",
+    y = "Volume of Work Orders",
+    fill = "Digital Queue"
+  ) +
+  theme(
+    # Move legend to the bottom to allow more horizontal breathing room
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9)
+  ) +
+  # Force the legend to wrap into 2 columns so long department names are never cut off
+  guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
