@@ -1,5 +1,5 @@
 ---
-title: "Descriptive Analytics of Boston 311, year 2024"
+title: "Data Analytics for Boston 311, year 2024"
 author: "Joël R. Pradines, Ph.D."
 date: today
 format:
@@ -10,6 +10,7 @@ format:
     theme: cosmo
     math: true
     embed-resources: true
+    link-external-newwindow: true
 bibliography: references.bib
 nocite: |
   @*
@@ -39,93 +40,289 @@ library(tidyr)
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 ```
 
-# 1. Data Cleaning
+# 1. Introduction
+
+The introduction is about providing an example of what values descriptive analysis of a maintenance related data set can bring. In there should be the following points:
+- it requires knowledge of statistics and understanding of programming
+- statistical rigor is key to obtaining sound results and it requires appropriate training and experience
+- analysis cannot be fully automated because each dataset is unique
+- dataset uniqueness requires human detective work to uncover the dataset lessons and this often implies a trial-error process
+
+This process is next illustrated with the analysis of the Boston 311 Year 2024 dataset which is freely available online. The detective work yields the following findings:
+- TBC
+
+# 2. Data Cleaning
+
+Data cleaning is an important first task when analyzing a dataset. We first have to identify the format of each column, check for formatting errors and also missing data. This process is typically done via programming and it sometimes might include a few manual steps.
+
+```{r}
+#| label: data-dictionary
+#| message: false
+#| warning: false
+#| echo: true
+
+library(dplyr)
+library(DT)
+
+# 1. Print the overall dimensions
+cat("Dataset Dimensions:", format(nrow(boston_311), big.mark = ","), "rows and", ncol(boston_311), "columns.\n\n")
+
+# 2. Generate the column summary dataframe
+data_summary <- tibble(
+  Column = names(boston_311),
+  Type = sapply(boston_311, function(x) paste(class(x), collapse = ", ")),
+  Unique_Values = sapply(boston_311, n_distinct),
+  Missing_Values = sapply(boston_311, function(x) sum(is.na(x)))
+)
+
+# 3. Render as an interactive HTML table
+datatable(
+  data_summary,
+  rownames = FALSE,
+  options = list(
+    pageLength = 10, 
+    autoWidth = TRUE,
+    dom = 'tp' # Keeps the interface clean (just table and pagination)
+  ),
+  caption = "Dataset Overview: Column types, unique values, and missing data."
+)
+```
+
+After validating the column formats, we filter out any requests that remained open at the end of 2024, keeping only fully resolved work orders as our primary analytical dataset.
 
 ```{r}
 #| label: data-cleaning
 #| message: false
 #| warning: false
-#| echo: false
+#| echo: true
 
+# Ingestion
+boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
+# Cleaning
 boston_clean <- boston_311 %>%
-  # Isolate completed work orders
+  # Completed work orders
   filter(case_status == "Closed", !is.na(closed_dt), !is.na(open_dt)) %>%
   mutate(
-    # Calculate exact resolution time
+    # Exact resolution time
     resolution_days = as.numeric(difftime(closed_dt, open_dt, units = "days")),
-    
-    # Extract temporal features for seasonality and scheduling analysis
+    # Temporal features for seasonality and scheduling analysis
     open_month = month(open_dt, label = TRUE, abbr = TRUE),
     open_wday = wday(open_dt, label = TRUE, abbr = TRUE, week_start = 1), # Monday = 1
     open_hour = hour(open_dt)
   ) %>%
   # Remove data entry errors (negative resolution times)
   filter(resolution_days >= 0)
-
+# Sort output
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
+
+Before proceeding to the analysis of the main dataset, it is instructive to look at some features of the subset of open requests.
+
+# 3. Open Requests at the End of 2024
+
+We now look at the features of the subset of open requests. This will provide an example of how to stress-test a visual observation and detect a major operational disturbance.
+
 
 ```{r}
 #| label: isolate-open-cases
 #| message: false
 #| warning: false
-#| echo: false
+#| echo: true
 
+# Tickets still open at the end of 2024
 boston_open <- boston_311 %>%
   filter(case_status == "Open" | is.na(closed_dt)) %>%
   mutate(
     open_month = month(open_dt, label = TRUE, abbr = TRUE),
-    # Calculate ticket age as of the end of the 2024 calendar year
+    # Ticket age as of the end of the 2024 calendar year
     days_open_at_yearend = as.numeric(difftime(as.POSIXct("2024-12-31 23:59:59"), open_dt, units = "days"))
   )
-
+# Short output
 cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
-cat("--- Age of Open Tickets (in days) at the end of 2024 ---\n")
-summary(boston_open$days_open_at_yearend)
 ```
 
+**Note**: *The R code was displayed ("echoed") so far to illustrate the need for programming. For the rest of the report, the code will no longer be displayed in the report output (html). But it is still contained in the source file (qmd document) that generates the html.*
 
-# 2. Resolution Time
-
-A common pitfall in operational reporting is relying on the average (mean) time to close a ticket. In property maintenance, completion times are rarely normally distributed. They exhibit a severe right skew: most tasks are completed quickly, but a handful of capital-intensive or disputed tasks can remain open for months. 
-
-When a long tail exists, the mean is artificially inflated, making the operational baseline look much worse than it actually is. The median is the mathematically sound metric for setting Service Level Agreements (SLAs).
+@fig-open-tickets-distribution below overlays a density curve on top of a weekly-binned histogram. 
 
 ```{r}
-#| label: resolution-distribution
+#| label: fig-open-tickets-distribution
 #| echo: false
 #| warning: false
 #| fig-width: 8
 #| fig-height: 5
+#| fig-cap: "Age distribution of open requests at the end of 2024."
 
-# Calculate the portfolio-level summary stats
-res_summary <- boston_clean %>%
-  summarise(
-    Mean = mean(resolution_days, na.rm = TRUE),
-    Median = median(resolution_days, na.rm = TRUE)
-  )
-
-# Plot the distribution focusing on the first 60 days
-ggplot(boston_clean, aes(x = resolution_days)) +
-  geom_histogram(binwidth = 1, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(xintercept = res_summary$Mean, color = "darkred", linetype = "dashed", linewidth = 1) +
-  geom_vline(xintercept = res_summary$Median, color = "black", linetype = "solid", linewidth = 1) +
-  # Zooming the x-axis to 60 days to see the bulk of the curve, though the data extends much further
-  coord_cartesian(xlim = c(0, 60)) + 
-  annotate("text", x = res_summary$Mean + 1, y = 20000, 
-           label = paste("Mean:\n", round(res_summary$Mean, 1), "days"), 
-           color = "darkred", hjust = 0, size = 4, fontface = "bold") +
-  annotate("text", x = res_summary$Median + 1, y = 25000, 
-           label = paste("Median:\n", round(res_summary$Median, 1), "days"), 
-           color = "black", hjust = 0, size = 4, fontface = "bold") +
+ggplot(boston_open, aes(x = days_open_at_yearend)) +
+  # Histogram with a 7-day binwidth to represent weekly operational cycles
+  geom_histogram(aes(y = after_stat(density)), binwidth = 7, fill = "lightgray", color = "white") +
+  # Density overlay to highlight the overall shape and search for bimodality
+  geom_density(color = "darkred", linewidth = 1) +
   theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 365, by = 60)) +
+  scale_y_continuous(labels = scales::percent) +
   labs(
-    title = "Distribution of Maintenance Resolution Times",
-    subtitle = "The long right tail pulls the average significantly higher than the typical (median) experience.",
-    x = "Days to Close",
-    y = "Volume of Work Orders"
+    title = "Age Distribution of Open Requests at Year-End",
+    subtitle = "Investigating bimodality: Active recent backlog vs. stagnant long-term requests.",
+    x = "Days Open (as of Dec 31, 2024)",
+    y = "Density (Proportion of Open Work Orders)"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
   )
 ```
+
+Visual inspection suggests distinct "waves" or peaks. A critical step is questioning whether these structures represent real operational phenomena (like a seasonal surge) or are merely statistical illusions caused by "binning bias" — the arbitrary width of the histogram buckets.
+
+Because our sample size is large ($N > 40,000$), we can test the structural robustness of the backlog by altering the resolution of our histogram. If the waves are real, they will persist whether we group the data by day, by week, or by month.
+
+```{r}
+#| label: fig-robust-binning
+#| fig-subcap: true
+#| layout-ncol: 3
+#| fig-width: 4
+#| fig-height: 4
+#| echo: false
+#| warning: false
+#| fig-cap: "Histograms of age distribution of open requests at the end of 2024, with different bin sizes: (a) days, (b) weeks and (c) months."
+
+# Base plot for the first two charts mapping continuous days
+p_base <- ggplot(boston_open, aes(x = days_open_at_yearend)) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 365, by = 120)) +
+  labs(x = "Days Open (as of Dec 31)", y = "Volume of Open Tickets") +
+  theme(plot.title = element_text(size = 11, face = "bold"))
+
+# 1. Daily Binning
+p_base + 
+  geom_histogram(binwidth = 1, fill = "darkgray", color = "white", linewidth = 0.1) +
+  labs(title = "Daily Resolution (1-Day Bins)")
+
+# 2. Operational Resolution: Weekly Binning
+p_base + 
+  geom_histogram(binwidth = 7, fill = "steelblue", color = "white", linewidth = 0.2) +
+  labs(title = "Weekly Resolution (7-Day Bins)")
+
+# 3. Macro Resolution: Calendar Months
+boston_open %>%
+  # Reverse the month levels so December (newest) is on the left, matching the 0-365 days flow
+  mutate(open_month_rev = factor(open_month, levels = rev(levels(open_month)))) %>%
+  ggplot(aes(x = open_month_rev)) +
+  geom_bar(fill = "darkred", color = "white", linewidth = 0.2) +
+  theme_minimal() +
+  labs(
+    title = "Monthly Resolution (Calendar)",
+    x = "Month Opened (Newest to Oldest)", 
+    y = "Volume of Open Tickets"
+  ) +
+  theme(
+    plot.title = element_text(size = 11, face = "bold"),
+    # Angle the text slightly to ensure all 12 month labels fit cleanly
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+@fig-robust-binning suggests that the peaks at age 60-day and 170-day are robust. They do not seem to be binning artifacts. Yet, this statement is still based on visual inspection. There exists a statistically rigorous test that can be used to check for peak presence.
+
+Hartigan's Dip Test is a non-parametric test specifically designed to detect multimodality [@hartigan1985dip]. The null hypothesis ($H_0$) states that the distribution is unimodal. Mathematically, it calculates the "dip" statistic ($D$), which is the maximum vertical distance between the empirical distribution function, $F_n(x)$, and the best-fitting unimodal distribution function, $U(x)$:
+$$D = \sup_x \vert{}F_n(x) - U(x)\vert{}$$
+If the data truly contains multiple structural waves (like your 60-day and 170-day spikes), $F_n(x)$ will deviate so drastically from any possible unimodal curve that the $p$-value will approach zero, definitively rejecting the null hypothesis.
+
+
+```{r}
+#| label: hartigans-dip-test
+#| echo: false
+#| warning: false
+#| message: false
+
+# Note: Requires the 'diptest' package
+library(diptest)
+library(dplyr)
+
+# Execute the test on the continuous days open variable
+dip_result <- dip.test(boston_open$days_open_at_yearend)
+
+# Extract and format the results
+dip_stat <- round(dip_result$statistic, 4)
+dip_pval <- format(dip_result$p.value, scientific = TRUE, digits = 3)
+
+cat("--- Hartigan's Dip Test for Unimodality ---\n")
+cat("Dip Statistic (D):", dip_stat, "\n")
+cat("P-Value:          ", dip_pval, "\n")
+
+# Interpretative output for the report
+if(dip_result$p.value < 0.05) {
+  cat("\nConclusion: The p-value approaches zero, mathematically rejecting unimodality.\n")
+  cat("The distinct waves in the backlog are structural realities, not binning artifacts.")
+} else {
+  cat("\nConclusion: Failed to reject unimodality.")
+}
+```
+
+Having established the robustness of the 60-day and 170-day spikes, we investigate their potential origins by examining monthly requests that are still open at the end of 2024 by department in @fig-open-tickets-by-month.
+
+```{r}
+#| label: fig-open-tickets-by-month
+#| echo: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 6
+#| fig-cap: "Visualization of departments contributions to open requests at the end of 2024 by starting month (Note that the month order is the reverse of that in @fig-robust-binning (c))."
+
+# 1. Identify the top 4 departments struggling with the most open tickets
+top_open_subjects <- boston_open %>%
+  count(subject, sort = TRUE) %>%
+  slice_head(n = 4) %>%
+  pull(subject)
+
+# 2. Group the data for the stacked visualization
+plot_data_open <- boston_open %>%
+  mutate(
+    subject_grouped = ifelse(subject %in% top_open_subjects, subject, "All Other Departments"),
+    # Factor to ensure the grey baseline sits at the bottom of the stack
+    subject_grouped = factor(subject_grouped, levels = c("All Other Departments", top_open_subjects))
+  )
+
+# 3. Generate the exploratory bar chart
+ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
+  geom_bar(color = "white", linewidth = 0.2) +
+  scale_fill_manual(
+    values = c(
+      "All Other Departments" = "grey80",
+      # Using a clear, distinct color palette for the top culprits
+      setNames(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3"), top_open_subjects)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Year-End Backlog by Month of Origin",
+    subtitle = "Exploratory view: Identifying seasonal waves and departmental bottlenecks.",
+    x = "Month Ticket Was Opened",
+    y = "Volume of Open Tickets at Year-End",
+    fill = "Department"
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9)
+  ) +
+  guides(fill = guide_legend(ncol = 2, reverse = TRUE))
+```
+
+
+The visualization immediately resolves the mystery of the 170-day spike. The massive red block shows that the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
+
+This systemic blockage aligns perfectly with the timeline of the **Sumner Tunnel Restoration Project**. The Massachusetts Department of Transportation (MassDOT) executed a full, 24/7 closure of the Sumner Tunnel from July 5 to August 5, 2024. The entire month of June involved intense logistical preparation for this $160 million infrastructure project—altering traffic patterns, setting up regional detours, and modifying transit routes. This monumental shift in city traffic overwhelmed the Traffic Division's capacity, creating a localized work-order backlog that the department could not clear before the end of the year.
+
+
+
+# 4. Resolution Time
+
+We now focus on request resolution time. A common pitfall is relying on the average (mean) time to close a ticket. In property maintenance, completion times are rarely normally distributed. They exhibit a severe right skew: most tasks are completed quickly, but a handful of capital-intensive or disputed tasks can remain open for months. 
+
+When a long tail exists, the mean is artificially inflated, making the operational baseline look much worse than it actually is. The median is the mathematically sound metric for setting Service Level Agreements (SLAs).
+
 
 ```{r}
 #| label: resolution-density-log
@@ -169,17 +366,16 @@ ggplot(boston_clean, aes(x = resolution_days)) +
   )
 ```
 
-## 3. SLA Compliance Analytics
+# 5. SLA Compliance Analytics
 
 Absolute resolution times only tell half the story. To truly evaluate vendor and operational performance, we must compare the completion timestamp (`closed_dt`) against the algorithmic deadline (`sla_target_dt`). 
 
 This section isolates the subset of closed requests with defined service level agreements. We calculate a compliance rate (the percentage of tickets closed on or before their target date) grouped by the top service categories.
 
-### The SLA Delta Distribution (Lateness/Earliness)
+## 5.1 The SLA Delta Distribution (Lateness/Earliness)
 
-Before calculating aggregated compliance rates, we analyze the distribution of the SLA Delta (Actual Resolution Time minus SLA Target Time). 
-
-A value of `0` means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values indicate the ticket was overdue. Looking at this continuous distribution reveals the variance and behavioral clustering around the algorithmic deadline.
+We now analyze the distribution of the SLA Delta (Actual Resolution Time minus SLA Target Time). 
+A value of `0` means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values indicate the ticket was overdue. Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline.
 
 ```{r}
 #| label: sla-delta-distribution
@@ -218,109 +414,13 @@ ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
 ```
 
 
-### Feature Dependency Testing (Categorical vs. Continuous)
+## 5.2 Factors Driving Variance in SLA Compliance
 
-To systematically identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., Department, Neighborhood, Day of the Week) and the continuous `sla_delta_days` variable.
+To systematically identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography,...) and the continuous SLA Delta. 
 
-Using linear modeling (mathematically equivalent to a One-Way ANOVA for single categorical predictors), we calculate the Adjusted $R^2$ for each factor. This serves as our effect size ($\eta^2$), allowing us to rank the features by the percentage of variance they explain in the SLA Delta, circumventing the $p$-value inflation inherent in large datasets.
+Because the dataset contains right-tail outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
 
-```{r}
-#| label: feature-dependency-test
-#| echo: false
-#| warning: false
-#| message: false
-
-library(purrr)
-library(broom)
-
-# 1. Define the categorical factors we want to interrogate
-factors_to_test <- c("subject", "reason", "type", "source", "neighborhood", "open_wday")
-
-# 2. Function to run ANOVA/LM and extract the effect size (Adj R-Squared) and p-value
-test_dependency <- function(feature_name, data) {
-  # Build formula: sla_delta_days ~ feature
-  formula_str <- paste("sla_delta_days ~", feature_name)
-  
-  # Fit model
-  model <- lm(as.formula(formula_str), data = data)
-  model_summary <- summary(model)
-  
-  # Extract metrics
-  tibble(
-    Factor = feature_name,
-    Adj_R_Squared = model_summary$adj.r.squared,
-    # F-statistic p-value calculation
-    P_Value = pf(model_summary$fstatistic[1], 
-                 model_summary$fstatistic[2], 
-                 model_summary$fstatistic[3], 
-                 lower.tail = FALSE)
-  )
-}
-
-# 3. Map the function across all factors and rank by explanatory power
-dependency_results <- map_df(factors_to_test, ~test_dependency(.x, sla_delta_data)) %>%
-  arrange(desc(Adj_R_Squared)) %>%
-  mutate(
-    # Format for clean reporting
-    Variance_Explained = scales::percent(Adj_R_Squared, accuracy = 0.01),
-    P_Value = format(P_Value, scientific = TRUE, digits = 3)
-  ) %>%
-  select(Factor, Variance_Explained, Adj_R_Squared, P_Value)
-
-cat("--- Factor Dependency Ranking (Effect Size) ---\n")
-print(dependency_results)
-```
-
-### SLA Delta by Department
-
-The aggregated SLA delta distribution contains multiple peaks (multi-modal). By faceting the data by the top service subjects, we can isolate the operational workflows of individual departments. 
-
-This reveals that the "bumps" on the far left of the portfolio view are driven by specific departments closing tickets consistently ahead of long-term SLAs, while other departments struggle tightly against shorter deadlines.
-
-```{r}
-#| label: sla-delta-faceted
-#| echo: false
-#| warning: false
-#| fig-width: 10
-#| fig-height: 8
-
-# Identify the top 6 departments by volume to keep the grid readable
-top_subjects <- sla_delta_data %>%
-  count(subject, sort = TRUE) %>%
-  slice_head(n = 6) %>%
-  pull(subject)
-
-# Faceted histogram
-ggplot(sla_delta_data %>% filter(subject %in% top_subjects), 
-       aes(x = sla_delta_days, fill = compliance_status)) +
-  # boundary = 0 aligns the bins to start/stop exactly on integers
-  geom_histogram(binwidth = 1, boundary = 0, color = "white", alpha = 0.8) +
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 0.8) +
-  scale_fill_manual(values = c("On Time (Early)" = "steelblue", "Overdue (Late)" = "darkred")) +
-  # Zooming slightly to cut out extreme multi-month outliers and focus on the main clusters
-  coord_cartesian(xlim = c(-35, 15)) +
-  facet_wrap(~ subject, scales = "free_y", ncol = 2) +
-  theme_minimal() +
-  labs(
-    title = "SLA Delta Distributions by Top Departments",
-    subtitle = "Setting boundary = 0 cleanly splits on-time vs overdue. Facets reveal departmental 'bumps'.",
-    x = "SLA Delta (Days)",
-    y = "Volume of Work Orders",
-    fill = "Status"
-  ) +
-  theme(
-    legend.position = "top",
-    strip.text = element_text(face = "bold", size = 10)
-  )
-```
-
-## Factors Driving Variance in Timely Compliance
-
-To systematically identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography) and the continuous SLA Delta. 
-
-Because the dataset is very large ($N > 130,000$) and contains right-tail outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
-
-### The Mathematical Approach: Volume-Weighted K-S Distance
+### 5.2.1 The Mathematical Approach: Volume-Weighted K-S Distance
 
 To correctly capture the true operational reality, we abandon variance and compare the **Empirical Cumulative Distribution Functions (ECDFs)** using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.
 
@@ -334,12 +434,12 @@ $$D_k = \sup_x |F_k(x) - F_{global}(x)|$$
 This outputs a bounded value between $0$ (identical distributions) and $1$ (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to extreme outliers.
 
 ```{r}
-#| label: ks-statistic-explanation
+#| label: fig-ks-statistic-explanation
 #| echo: false
 #| warning: false
 #| fig-width: 9
 #| fig-height: 6
-
+#| fig-cap: "Graphical explanation of the Kolmogorov-Smirnov statistic."
 # 1. Identify a "Goldilocks" subgroup (high volume, moderate D_k around 0.35)
 global_dist <- sla_delta_data$sla_delta_days
 
@@ -422,7 +522,7 @@ $$D_{weighted} = \sum_{k=1}^{K} \left( \frac{n_k}{N} \right) D_k$$
 
 Where $n_k$ is the total number of work orders in subgroup $k$, and $N$ is the total volume across all subgroups. This penalizes noisy variance from tiny subgroups and rewards factors where massive subsets of work fundamentally deviate from the global baseline.
 
-### Operational Divide: Task vs. Geography
+### 5.2.2 Results: Task vs. Geography
 
 When we apply this non-parametric ranking to all organizational, task-based, and geographic features, a stark operational divide emerges:
 
@@ -500,7 +600,7 @@ kable(
 )
 ```
 
-## Return to the Histogram visualization
+### 5.2.3 Result Illustration with Histograms
 
 While the K-S statistic is mathematically bulletproof against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).
 
