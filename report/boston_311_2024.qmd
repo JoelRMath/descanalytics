@@ -112,6 +112,7 @@ boston_clean <- boston_311 %>%
   ) %>%
   # Remove data entry errors (negative resolution times)
   filter(resolution_days >= 0)
+write_csv(boston_clean, here("data", "boston_clean.csv"))
 # Sort output
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
@@ -137,6 +138,7 @@ boston_open <- boston_311 %>%
     # Ticket age as of the end of the 2024 calendar year
     days_open_at_yearend = as.numeric(difftime(as.POSIXct("2024-12-31 23:59:59"), open_dt, units = "days"))
   )
+write_csv(boston_open, here("data", "boston_open.csv"))
 # Short output
 cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
 ```
@@ -657,4 +659,162 @@ ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
   ) +
   # Force the legend to wrap into 2 columns so long department names are never cut off
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
+```
+
+# 6. Unsupervised Text Classification (BERTopic)
+
+To uncover the specific operational themes driving SLA delays without relying on human bias or arbitrary keyword guessing, we deployed an unsupervised deep learning pipeline. 
+
+Using the `sentence-transformers` architecture locally on Apple Silicon, we converted the unstructured closure notes into high-dimensional embeddings, which were then mathematically clustered using HDBSCAN. Finally, the algorithm generated human-readable topic labels for these clusters.
+
+Because Transformer models require heavy computation, the classification script below was executed asynchronously. The results were saved to a static dataset, ensuring this report remains lightweight and strictly focused on descriptive visualization.
+
+### 6.1 The Python AI Pipeline
+
+```python
+#| label: bertopic-pipeline
+#| eval: false
+#| echo: true
+
+import pandas as pd
+from bertopic import BERTopic
+from sentence_transformers import SentenceTransformer
+
+# 1. Load the SLA-filtered dataset
+df = pd.read_csv("../data/boston_clean.csv") 
+df = df.dropna(subset=['closure_reason'])
+docs = df['closure_reason'].tolist()
+
+# 2. Initialize the Embedding Model on Apple Silicon GPU
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="mps")
+
+# 3. Fit BERTopic to discover operational clusters 
+topic_model = BERTopic(
+    embedding_model=embedding_model,
+    min_topic_size=50, 
+    calculate_probabilities=False
+)
+topics, probs = topic_model.fit_transform(docs)
+
+# 4. Merge the AI-generated Topic Names back to the dataset
+df['topic_id'] = topics
+topic_info = topic_model.get_topic_info()
+df = df.merge(topic_info[['Topic', 'Name']], left_on='topic_id', right_on='Topic', how='left')
+df = df.rename(columns={'Name': 'ai_topic_name'})
+
+# 5. Export for reporting
+df.to_csv("../data/boston_bertopic_results.csv", index=False)
+```
+
+### 6.2 Visualizing the AI Clusters
+
+With the AI having categorized the unstructured text, we can now visualize the exact volume of delayed tickets attributed to each systemic issue. (Note: BERTopic assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern).
+
+```{r}
+#| label: plot-bertopic-results
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+#| fig-cap: "Volume of SLA breaches categorized by AI-discovered operational themes."
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(here)
+
+# 1. Read ONLY the newly generated AI columns and the Ticket ID
+ai_results <- read_csv(here("data", "boston_bertopic_results.csv")) %>%
+  select(case_enquiry_id, topic_id, ai_topic_name) 
+
+# 2. Join the AI topics to your existing SLA dataset and filter
+ai_plot_data <- sla_delta_data %>%
+  inner_join(ai_results, by = "case_enquiry_id") %>%
+  filter(compliance_status == "Overdue (Late)", topic_id != -1) %>%
+  mutate(
+    clean_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_topic = str_replace_all(clean_topic, "_", " "),
+    clean_topic = str_to_title(clean_topic)
+  ) %>%
+  count(clean_topic, sort = TRUE) %>%
+  slice_head(n = 15)
+
+# 3. Generate the visualization
+ggplot(ai_plot_data, aes(x = n, y = reorder(clean_topic, n))) +
+  geom_col(fill = "steelblue", color = "white", alpha = 0.9) +
+  theme_minimal() +
+  labs(
+    title = "Top Causes of Operational Delays (Discovered via AI)",
+    subtitle = "Unsupervised clustering of closure notes reveals distinct systemic bottlenecks.",
+    x = "Volume of Delayed Work Orders",
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 11, face = "bold")
+  )
+```
+
+```{r}
+#| label: topic-factor-enrichment
+#| echo: true
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "Enrichment heatmap showing which AI topics are statistically over-represented across municipal departments."
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(here)
+
+# 1. Load the AI results
+ai_df <- read_csv(here("data", "boston_bertopic_results.csv")) %>%
+  filter(topic_id != -1, !is.na(department)) %>%
+  mutate(
+    clean_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_topic = str_replace_all(clean_topic, "_", " "),
+    clean_topic = str_to_title(clean_topic)
+  )
+
+# 2. Focus on top departments and top topics to keep the grid readable
+top_depts  <- ai_df %>% count(department, sort = TRUE) %>% slice_head(n = 6) %>% pull(department)
+top_topics <- ai_df %>% count(clean_topic, sort = TRUE) %>% slice_head(n = 12) %>% pull(clean_topic)
+
+filtered_df <- ai_df %>%
+  filter(department %in% top_depts, clean_topic %in% top_topics)
+
+# 3. Create a contingency table and run Chi-Square to get Standardized Residuals
+contingency_matrix <- table(filtered_df$clean_topic, filtered_df$department)
+chisq_res <- chisq.test(contingency_matrix)
+
+# 4. Convert residuals back to a tidy dataframe for ggplot
+enrichment_data <- as.data.frame(chisq_res$stdres) %>%
+  rename(Topic = Var1, Department = Var2, StdResidual = Freq)
+
+# 5. Visualize as an Enrichment Heatmap
+ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  scale_fill_gradient2(
+    low = "#2b83ba", mid = "#ffffbf", high = "#d7191c",
+    midpoint = 0,
+    name = "Standardized\nResidual"
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Statistical Enrichment of AI Topics Across Departments",
+    subtitle = "Red indicates strong over-representation (residual > +2); Blue indicates under-representation.",
+    x = NULL,
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(size = 10)
+  )
 ```
