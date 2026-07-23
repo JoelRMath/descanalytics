@@ -910,3 +910,135 @@ ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
     axis.text.y = element_text(size = 11, face = "bold")
   )
 ```
+
+# 7. Seasonal Demand and System Capacity
+
+To properly engineer workforce schedules, we must understand the seasonal fluctuations in constituent demand. However, high demand alone does not necessarily indicate a problem if the municipal workforce is properly scaled to handle it.
+
+The true operational insight lies in comparing total inbound ticket volume (Demand) against the volume of missed SLAs (System Failure) month over month. This reveals the exact moments when operational capacity is overwhelmed by seasonal surges.
+
+## 7.1 Citywide Macro Trends
+
+We first look at the aggregate stress placed on Boston's municipal infrastructure across the entire year.
+
+```{r}
+#| label: seasonal-trends-global
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Citywide monthly inbound ticket demand versus the volume of resulting SLA breaches."
+
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(scales)
+
+# 1. Base dataset with extracted month
+seasonal_base <- sla_delta_data %>%
+  mutate(created_month = month(open_dt, label = TRUE, abbr = TRUE))
+
+# 2. Global Aggregation
+global_summary <- seasonal_base %>%
+  group_by(created_month) %>%
+  summarise(
+    Total_Demand = n(),
+    SLA_Breaches = sum(compliance_status == "Overdue (Late)", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Total_Demand, SLA_Breaches),
+    names_to = "Metric",
+    values_to = "Volume"
+  ) %>%
+  mutate(
+    Metric = factor(Metric, levels = c("Total_Demand", "SLA_Breaches"), 
+                    labels = c("Total Inbound Tickets (Demand)", "Missed SLAs (System Failure)"))
+  )
+
+# 3. Build the global seasonal overlay
+ggplot(global_summary, aes(x = created_month, y = Volume, group = Metric, color = Metric)) +
+  geom_line(linewidth = 1.5) +
+  geom_point(size = 3) +
+  scale_y_continuous(labels = comma) +
+  scale_color_manual(values = c("Total Inbound Tickets (Demand)" = "#b3cde3", 
+                                "Missed SLAs (System Failure)" = "#e41a1c")) +
+  theme_minimal() +
+  labs(
+    title = "Citywide Seasonal Operational Stress Test",
+    subtitle = "Tracking when inbound municipal demand outpaces workforce resolution capacity.",
+    x = "Month Request Opened",
+    y = "Ticket Volume",
+    color = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "top",
+    axis.text.x = element_text(face = "bold")
+  )
+```
+
+## 7.2 Departmental Micro Trends
+
+While the citywide view provides the baseline, operational failures are rarely distributed evenly. By breaking the seasonality down by the highest-volume departments, we can see how different seasonal events (e.g., winter storms vs. summer park usage) trigger capacity thresholds across distinct municipal workforces.
+
+```{r}
+#| label: seasonal-trends-department
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 12
+#| fig-height: 8
+#| fig-cap: "Departmental breakdown of monthly demand versus SLA breaches."
+
+# 1. Find the top 6 departments by overall ticket volume 
+top_depts_season <- seasonal_base %>%
+  count(department, sort = TRUE) %>%
+  slice_head(n = 6) %>%
+  pull(department)
+
+# 2. Departmental Aggregation
+dept_summary <- seasonal_base %>%
+  filter(department %in% top_depts_season) %>%
+  group_by(department, created_month) %>%
+  summarise(
+    Total_Demand = n(),
+    SLA_Breaches = sum(compliance_status == "Overdue (Late)", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Total_Demand, SLA_Breaches),
+    names_to = "Metric",
+    values_to = "Volume"
+  ) %>%
+  mutate(
+    Metric = factor(Metric, levels = c("Total_Demand", "SLA_Breaches"), 
+                    labels = c("Total Inbound Tickets (Demand)", "Missed SLAs (System Failure)"))
+  )
+
+# 3. Build the faceted visualization
+ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = Metric)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  facet_wrap(~ department, scales = "free_y", ncol = 3) +
+  scale_y_continuous(labels = comma) +
+  scale_color_manual(values = c("Total Inbound Tickets (Demand)" = "#b3cde3", 
+                                "Missed SLAs (System Failure)" = "#e41a1c")) +
+  theme_minimal() +
+  labs(
+    title = "Seasonal Stress Test by Top Departments",
+    subtitle = "Comparing capacity thresholds across individual workflows (Note: Y-axes vary by department).",
+    x = "Month Request Opened",
+    y = "Ticket Volume",
+    color = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
