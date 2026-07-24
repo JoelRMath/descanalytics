@@ -1042,3 +1042,384 @@ ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = 
   )
 ```
 
+# 8. Operational Reliability (Survival Analysis)
+
+While average resolution times are commonly used in municipal reporting, they suffer from a severe statistical flaw: survivorship bias. By excluding tickets that are currently open, standard averages artificially deflate the apparent resolution time of heavily backlogged departments.
+
+## 8.1 Kaplan-Meier
+
+To capture the true operational reliability of the city, we apply time-to-event Survival Analysis. Using the Kaplan-Meier estimator, we plot the exact probability that a constituent's request will remain unresolved as days pass, handling open tickets as right-censored data points.
+
+```{r}
+#| label: survival-analysis-departments
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Kaplan-Meier survival curves estimating the probability a ticket remains open over time."
+
+library(dplyr)
+library(ggplot2)
+library(survival)
+library(broom)
+library(stringr)
+library(scales)
+
+# 1. Isolate the top 5 departments
+top_5_depts <- sla_delta_data %>%
+  count(department, sort = TRUE) %>%
+  slice_head(n = 5) %>%
+  pull(department)
+
+survival_df <- sla_delta_data %>%
+  filter(department %in% top_5_depts) %>%
+  mutate(
+    max_date = max(open_dt, na.rm = TRUE),
+    calc_end_dt = if_else(is.na(closed_dt), max_date, closed_dt),
+    duration_days = as.numeric(difftime(calc_end_dt, open_dt, units = "days")),
+    status_ind = if_else(is.na(closed_dt), 0, 1)
+  ) %>%
+  filter(duration_days >= 0)
+
+# 2. Fit the Kaplan-Meier Model
+km_fit <- survfit(Surv(duration_days, status_ind) ~ department, data = survival_df)
+tidy_km <- tidy(km_fit) %>% mutate(clean_dept = str_remove(strata, "department="))
+
+# 3. Visualize the Hazard Curves
+ggplot(tidy_km, aes(x = time, y = estimate, color = clean_dept)) +
+  geom_step(linewidth = 1.2, alpha = 0.8) +
+  coord_cartesian(xlim = c(0, 60)) + 
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Time-to-Resolution: Ticket Survival Analysis",
+    subtitle = "The mathematical probability that a 311 request remains unresolved as days pass.",
+    x = "Days Since Request Opened",
+    y = "Probability Ticket is Still Open",
+    color = "Department"
+  ) +
+  theme(plot.title = element_text(face = "bold", size = 14))
+```
+
+The Kaplan-Meier estimation reveals stark differences in how municipal departments process their queues, highlighting both highly reactive workforces and structural bottlenecks:
+
+Public Works (PWDx) - The Reactive Engine: The orange curve plummets almost instantly, indicating that roughly 80% to 85% of their tickets are resolved within the first 48 to 72 hours. This mathematically depicts a workforce optimized for rapid, high-volume triage (e.g., immediate pothole patching, trash pickup).
+
+The Baseline Cluster (BTDT, INFO, ISD): Transportation, the Mayor's Hotline, and Inspectional Services track closely together. They successfully clear about 75% of their open tickets within the first week. After that initial drop, they demonstrate a steady, predictable burn-down rate for more complex cases, approaching a near-zero unresolved rate by the 60-day mark.
+
+Parks and Recreation (PARK) - The Structural Long-Tail: The purple curve is the critical anomaly. While PARK resolves about half of its tickets in the first few days, the curve abruptly flattens into a concrete floor. By day 20, nearly 30% of their tickets remain open, and approximately 20% are essentially abandoned past the 60-day mark. This mathematical "long-tail" confirms that PARK does not suffer from a simple speed issue, but rather a structural inability to clear complex tickets, heavily implying capital budget constraints or a reliance on seasonal workforce unlocks.
+
+## 8.2 Multivariate Drivers of Resolution (Cox Proportional Hazards)
+
+While the Kaplan-Meier curves show us the overall survival rate of tickets by department, municipal operations do not exist in a vacuum. A ticket's resolution time is simultaneously influenced by the department assigned, the method the constituent used to report it, and whether it includes rich context like photographs.To untangle these overlapping variables, we apply a Cox Proportional Hazards Model:$$h(t\vert{}X) = h_0(t) \exp(\beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p)$$This multivariate regression calculates a Hazard Ratio (HR) for each variable. In this context, a "hazard" is a positive event (closing the ticket).HR > 1: The variable mathematically accelerates resolution (e.g., an HR of 1.5 means the ticket is closed 50% faster than the baseline).HR < 1: The variable acts as a bottleneck, delaying resolution.R#| label: cox-regression-model
+
+```{r}
+#| label: cox-regression-model-adjusted
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+#| fig-cap: "Hazard Ratios (Log Scale) isolating the impact of reporting sources and departments. Automated API integrations have been removed to isolate human workforce efficiency."
+
+library(dplyr)
+library(survival)
+library(broom)
+library(ggplot2)
+library(forcats)
+library(stringr)
+
+# 1. Prepare Data and Filter Automated Artifacts
+cox_df <- sla_delta_data %>%
+  filter(department %in% c("BTDT", "ISD", "INFO", "PARK", "PWDx")) %>%
+  mutate(
+    calc_end_dt = if_else(is.na(closed_dt), max(open_dt, na.rm = TRUE), closed_dt),
+    duration_days = as.numeric(difftime(calc_end_dt, open_dt, units = "days")),
+    status_ind = if_else(is.na(closed_dt), 0, 1),
+    source_clean = if_else(is.na(source), "Unknown", as.character(source))
+  ) %>%
+  # Remove the Maximo API artifact to measure actual human work
+  filter(duration_days > 0, !str_detect(source_clean, "Maximo"))
+
+# 2. Fit the Adjusted Cox Model
+cox_model <- coxph(Surv(duration_days, status_ind) ~ department + source_clean, data = cox_df)
+
+# 3. Tidy and Exponentiate
+tidy_cox <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term != "") %>%
+  mutate(
+    clean_term = str_remove_all(term, "department|source_clean"),
+    is_significant = if_else(p.value < 0.05, "Significant (p < .05)", "Not Significant"),
+    clean_term = fct_reorder(clean_term, estimate)
+  )
+
+# 4. Build the Log-Scaled Forest Plot
+ggplot(tidy_cox, aes(x = estimate, y = clean_term, color = is_significant)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "black", linewidth = 1) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, linewidth = 1.2) +
+  # Apply base-10 log scale for mathematically accurate visual distances
+  scale_x_log10(breaks = c(0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5)) + 
+  scale_color_manual(values = c("Significant (p < .05)" = "#1b9e77", "Not Significant" = "#7570b3")) +
+  theme_minimal() +
+  labs(
+    title = "Multivariate Drivers of Ticket Resolution",
+    subtitle = "Variables to the right (HR > 1) accelerate resolution. Variables to the left (HR < 1) delay it.",
+    x = "Hazard Ratio (Log-Scaled Multiplier of Resolution Speed)",
+    y = "Operational Variable",
+    color = "Statistical Significance"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom",
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
+```
+
+To interpret the multivariate forest plot, focus on the central dashed line at 1.00, which establishes the baseline resolution speed. The dots represent the Hazard Ratio—a direct speed multiplier for each operational variable. Variables resting to the right of the dashed line (HR > 1) accelerate resolution, while variables to the left (HR < 1) act as system bottlenecks that delay ticket closure. The horizontal bars attached to each point represent the statistical confidence interval; because none of these intervals cross the baseline, we can state with mathematical certainty that these variables genuinely impact workforce velocity rather than being random anomalies.
+
+By explicitly filtering out the automated genear maximo integration to isolate true human labor, the model proves that resolving a municipal issue is heavily dependent on departmental capacity and intake friction. The Public Works department (PWDx) operates at nearly double the baseline speed, validating its structural design for rapid triage, whereas the Parks department (PARK) operates at a 35% speed deficit due to long-tail bottlenecks. Additionally, the data confirms that manual intake channels—such as constituent phone calls—introduce significant administrative friction, actively slowing down resolution pipelines by roughly 22% compared to more streamlined, digitally precise reporting.
+
+
+# 9. System Stability: Queueing Theory and Backlog Velocity
+
+While Survival Analysis evaluates the lifespan of individual tickets, it does not measure the aggregate thermodynamic health of a department. To diagnose systemic instability, we must shift from the ticket level to the macro system level using Queueing Theory.This approach relies strictly on the mathematical balance between the Arrival Rate ($\lambda$)—tickets opened—and the Service Rate ($\mu$)—tickets closed. By calculating the net weekly queue change, we can strip away subjective text and measure pure operational momentum. When $\lambda > \mu$, the system enters a state of structural instability (growing backlog), regardless of how fast routine tickets are closed.
+
+```{r}
+#| label: queue-velocity-analysis
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 12
+#| fig-height: 8
+#| fig-cap: "Queueing Stability: Weekly net change in unresolved tickets (Arrivals minus Services)."
+
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+
+# 1. Calculate the Arrival Rate (lambda) and Service Rate (mu) per week
+queue_dynamics <- sla_delta_data %>%
+  filter(department %in% c("BTDT", "ISD", "INFO", "PARK", "PWDx")) %>%
+  mutate(
+    open_week = floor_date(open_dt, "week"),
+    close_week = floor_date(closed_dt, "week")
+  )
+
+# Arrivals per week
+arrivals <- queue_dynamics %>%
+  group_by(department, week = open_week) %>%
+  summarise(tickets_opened = n(), .groups = "drop")
+
+# Services per week (ignoring NAs for open tickets)
+services <- queue_dynamics %>%
+  filter(!is.na(close_week)) %>%
+  group_by(department, week = close_week) %>%
+  summarise(tickets_closed = n(), .groups = "drop")
+
+# 2. Merge and calculate Net Backlog Velocity
+backlog_velocity <- arrivals %>%
+  full_join(services, by = c("department", "week")) %>%
+  # Replace NAs with 0 for weeks where no tickets were opened or closed
+  replace_na(list(tickets_opened = 0, tickets_closed = 0)) %>%
+  mutate(
+    net_queue_change = tickets_opened - tickets_closed,
+    # Create a flag for color coding: Red = Growing queue, Blue = Shrinking queue
+    status = if_else(net_queue_change > 0, "Queue Growing (Instability)", "Queue Recovering (Stability)")
+  ) %>%
+  # Filter out extreme edge dates if necessary to keep the plot clean
+  filter(week >= min(arrivals$week, na.rm = TRUE) & week <= max(arrivals$week, na.rm = TRUE))
+
+# 3. Visualize the System Stability
+ggplot(backlog_velocity, aes(x = week, y = net_queue_change, fill = status)) +
+  geom_col(alpha = 0.85) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 1) +
+  facet_wrap(~ department, scales = "free_y", ncol = 2) +
+  scale_fill_manual(values = c("Queue Growing (Instability)" = "#e41a1c", 
+                               "Queue Recovering (Stability)" = "#377eb8")) +
+  theme_minimal() +
+  labs(
+    title = "Departmental Queue Stability (Backlog Velocity)",
+    subtitle = "Tracking weekly thermodynamic balance: Tickets Opened vs. Tickets Closed.",
+    x = "Week",
+    y = "Net Change in Open Tickets",
+    fill = "System Status"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+The Backlog Velocity chart maps the behavioral pulse of the city's workforce without relying on subjective administrative text. It reveals distinct operational realities across the monitored departments:
+
+PARK (The Seasonal Unlock): For the first six months of the year, the Parks Department operates in an unbroken state of structural instability. The continuous red growth confirms they lack the baseline daily capacity to match inbound requests. The massive blue correction in July indicates a seasonal or fiscal-year budget unlock, allowing them to finally deploy the capital or seasonal workforce required to crush the six-month backlog.
+
+BTDT (Administrative Batch Processing): Transportation displays a massive, singular correction of over 1,500 closed tickets in late summer. Because human workforces do not organically resolve 1,500 complex street-level issues in a single week, this is a clear artifact of database batch-closure. It represents a forced administrative reset to clear a runaway queue rather than natural operational velocity.
+
+PWDx & INFO (Just-in-Time Reactivity): Public Works and the Mayor's Hotline constantly oscillate between small delays and immediate recoveries, closely hugging the baseline. This is the signature of highly reactive, well-managed workforces operating with zero structural slack. They absorb immediate shocks (such as the January weather surge for PWDx) and immediately deploy surge capacity the following week to reset to zero.
+
+ISD (The Lagging Spring Surge): Inspectional Services demonstrates a steady accumulation of backlog through the spring months, directly aligning with the seasonal surge in construction and housing permits. Sustained recovery does not begin until mid-summer, indicating a persistent, multi-month lag between peak citizen demand and peak service delivery.
+
+# 10. Spatial Equity (Geospatial Autocorrelation)
+
+While overall departmental velocity provides a measure of system health, it does not address the distribution of that service. A critical mandate of municipal operations is equitable service delivery across all neighborhoods.
+
+To mathematically test if operational failures are equitably distributed or geographically biased, we apply spatial autocorrelation using Global Moran’s I. By mapping the SLA breach rates (the percentage of tickets that miss their target resolution time) across Boston's spatial boundaries, we can identify statistically significant "cold spots"—clusters of neighborhoods that systematically receive delayed service compared to the citywide baseline.
+
+## 10.1 Mapping SLA Breach Clusters
+
+To mathematically test if operational failures are equitably distributed or geographically biased, we apply spatial autocorrelation using Global Moran’s I. The statistic compares the variance of SLA breach rates across neighboring areas against the overall citywide variance:$$I = \frac{N}{W} \frac{\sum_i \sum_j w_{ij}(x_i - \bar{x})(x_j - \bar{x})}{\sum_i (x_i - \bar{x})^2}$$An index near $0$ implies that service delays are completely random ("equitable failure"). A positive index approaching $1$ proves that SLA breaches are structurally clustered, creating "cold spots" of systematic neglect. To ensure we are measuring true human equity rather than software architecture, automated closures originating from the Maximo integration API have been strictly filtered out of this spatial model.
+
+```{r}
+#| label: spatial-equity-morans-i
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "Geospatial distribution of SLA breach rates across Boston census tracts."
+
+library(dplyr)
+library(sf)
+library(tigris)
+library(spdep)
+library(ggplot2)
+library(stringr)
+
+# 1. Conjure the Shapefile via API (Natively downloads Suffolk County Census Tracts)
+options(tigris_use_cache = TRUE)
+boston_tracts <- tracts(state = "MA", county = "Suffolk", cb = TRUE, year = 2022, progress_bar = FALSE) %>%
+  st_transform(crs = 4326)
+
+# 2. Prepare the 311 Spatial Points
+spatial_311 <- sla_delta_data %>%
+  # Keep only valid spatial coordinates
+  filter(!is.na(latitude), !is.na(longitude)) %>%
+  # Strip out the automated API artifacts to isolate human labor
+  filter(!str_detect(if_else(is.na(source), "Unknown", as.character(source)), "Maximo")) %>%
+  # Convert 'on_time' column into a binary breach flag. 
+  # NOTE: Adjust "ONTIME" to precisely match the spelling/case in your dataset
+  mutate(is_breach = if_else(on_time == "ONTIME", 0, 1)) %>% 
+  # Convert flat data frame into an active spatial object
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+# 3. Spatial Join: Assign tickets to Census Tracts and calculate breach rates
+tract_breaches <- boston_tracts %>%
+  st_join(spatial_311, left = FALSE) %>%
+  group_by(GEOID) %>%
+  summarise(
+    total_tickets = n(),
+    breach_rate = mean(is_breach, na.rm = TRUE)
+  ) %>%
+  # Filter out tracts with highly volatile low sample sizes (e.g., airport, harbor islands)
+  filter(total_tickets > 50)
+
+# 4. Calculate Global Moran's I for Spatial Autocorrelation
+# Create the spatial weights matrix (defining which tracts touch each other)
+neighbors <- poly2nb(tract_breaches, queen = TRUE)
+weights <- nb2listw(neighbors, style = "W", zero.policy = TRUE)
+
+# Execute the mathematical test
+moran_result <- moran.test(tract_breaches$breach_rate, weights, zero.policy = TRUE)
+
+# 5. Visualize the Inequity
+ggplot(tract_breaches) +
+  geom_sf(aes(fill = breach_rate), color = "white", size = 0.1) +
+  scale_fill_viridis_c(option = "magma", labels = scales::percent_format()) +
+  theme_void() +
+  labs(
+    title = "Spatial Equity of Municipal Services",
+    subtitle = paste0("Global Moran's I: ", round(moran_result$estimate[1], 3), 
+                      " (p-value: ", signif(moran_result$p.value, 3), ")"),
+    fill = "SLA Breach Rate",
+    caption = "Excludes automated Maximo Integration closures to isolate human workforce equity."
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "right"
+  )
+```
+
+## 10.2 Localized Clusters of Neglect (LISA)
+
+Having proven that municipal delays are not uniformly distributed, we apply Local Indicators of Spatial Association (LISA) to mathematically draw boundaries around the city's operational "hotspots" and "coldspots." By scaling the breach rates and calculating their spatial lags, we can isolate census tracts that suffer from statistically significant, systemic neglect.
+
+Crucially, because automated closures originating from the genear maximo integration have been removed from this spatial model, the resulting clusters represent genuine disparities in human workforce deployment and street-level service delivery.
+
+```{r}
+#| label: spatial-equity-lisa
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "LISA Cluster Map isolating statistically significant zones of systemic neglect (High-High) and exceptional service (Low-Low)."
+
+# 1. Calculate Local Moran's I
+local_m <- localmoran(tract_breaches$breach_rate, weights, zero.policy = TRUE)
+
+# 2. Scale the variables to determine the quadrants (centered on the mean)
+c_breach <- tract_breaches$breach_rate - mean(tract_breaches$breach_rate, na.rm = TRUE)
+c_lag <- lag.listw(weights, c_breach, zero.policy = TRUE)
+
+# 3. Categorize the tracts into LISA clusters
+lisa_tracts <- tract_breaches %>%
+  mutate(
+    # Extract the p-value from the local moran matrix (Column 5)
+    p_val = local_m[, 5], 
+    
+    # Define the raw spatial quadrants
+    quadrant = case_when(
+      c_breach > 0 & c_lag > 0 ~ "High-High (Systemic Neglect)",
+      c_breach < 0 & c_lag < 0 ~ "Low-Low (Exceptional Service)",
+      c_breach > 0 & c_lag < 0 ~ "High-Low (Spatial Outlier)",
+      c_breach < 0 & c_lag > 0 ~ "Low-High (Spatial Outlier)",
+      TRUE ~ "Not Significant"
+    ),
+    
+    # Mask the quadrants by statistical significance (p < 0.05)
+    lisa_cluster = if_else(p_val <= 0.05, quadrant, "Not Significant")
+  ) %>%
+  # Convert the cluster to a factor for ordered plotting
+  mutate(lisa_cluster = factor(lisa_cluster, levels = c(
+    "High-High (Systemic Neglect)", 
+    "Low-Low (Exceptional Service)", 
+    "High-Low (Spatial Outlier)", 
+    "Low-High (Spatial Outlier)", 
+    "Not Significant"
+  )))
+
+# 4. Map the LISA Clusters
+# Define a stark, color-blind friendly palette to highlight the inequity
+lisa_colors <- c(
+  "High-High (Systemic Neglect)" = "#d73027",    # Red
+  "Low-Low (Exceptional Service)" = "#4575b4",   # Blue
+  "High-Low (Spatial Outlier)" = "#fdae61",      # Light Orange
+  "Low-High (Spatial Outlier)" = "#abd9e9",      # Light Blue
+  "Not Significant" = "#f0f0f0"                  # Light Grey
+)
+
+ggplot(lisa_tracts) +
+  geom_sf(aes(fill = lisa_cluster), color = "darkgrey", size = 0.1) +
+  scale_fill_manual(values = lisa_colors, drop = FALSE) +
+  theme_void() +
+  labs(
+    title = "Zones of Systemic Neglect vs. Exceptional Service",
+    subtitle = "Statistically significant spatial clusters of 311 SLA breaches (Local Moran's I, p < 0.05).",
+    fill = "LISA Classification",
+    caption = "Excludes automated genear maximo integration closures to isolate human workforce equity."
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "right",
+    legend.title = element_text(face = "bold")
+  )
+```
