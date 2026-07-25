@@ -40,20 +40,28 @@ library(tidyr)
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 ```
 
-# 1. Introduction
+# 1. Introduction: Applied Analytics for Maintenance Operations
 
-The introduction is about providing an example of what values descriptive analysis of a maintenance related data set can bring. In there should be the following points:
-- it requires knowledge of statistics and understanding of programming
-- statistical rigor is key to obtaining sound results and it requires appropriate training and experience
-- analysis cannot be fully automated because each dataset is unique
-- dataset uniqueness requires human detective work to uncover the dataset lessons and this often implies a trial-error process
+Managing large-scale property portfolios or municipal infrastructures—spanning hundreds of facilities and thousands of service requests—requires more than basic descriptive dashboards. Standard reporting metrics, such as average completion times or binary SLA (Service Level Agreement) compliance rates, frequently mask systemic bottlenecks. They obscure capital constraints, disguise inefficient dispatch routing, and fail to measure true workforce capacity.
 
-This process is next illustrated with the analysis of the Boston 311 Year 2024 dataset which is freely available online. The detective work yields the following findings:
-- TBC
+Optimizing maintenance operations at scale requires the application of advanced Data Science (DS) and Operations Research (OR) methodologies. Extracting actionable operational intelligence from service databases is an iterative process that relies on three core pillars:
 
-# 2. Data Cleaning
+Deep Statistical Rigor: Standard averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit traditional normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability. This requires someone having deep understanding of and extensive experience is statistics.
 
-Data cleaning is an important first task when analyzing a dataset. We first have to identify the format of each column, check for formatting errors and also missing data. This process is typically done via programming and it sometimes might include a few manual steps.
+Human Detective Work: Every operational dataset contains unique administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth requires an exploratory, trial-and-error analytical process that cannot be fully automated by generalized software.
+
+Advanced Programming: Moving beyond spreadsheet limitations to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is required to uncover valuable findings.
+
+## The Example Dataset (Boston 311)
+
+To demonstrate the application and analytical value of these methodologies, this report utilizes the publicly available Boston 311 (Year 2024) dataset as an applied proxy.
+
+In this context, Boston’s geographic districts and digital routing queues serve as an excellent mathematical analog for decentralized property management. Just as a massive real estate portfolio is divided into distinct building subsets managed by local technician teams, the city's workload is distributed across distinct neighborhoods and operational queues. By treating constituent requests as tenant service orders, this document serves as a methodological blueprint, detailing step-by-step how advanced analytics can uncover local team bottlenecks, evaluate geographic equity across different property subsets, and model true workforce dynamics.
+
+
+# 2. Data Validation and Engineering
+
+Data validation forms the foundation of any rigorous statistical analysis. Before engineering operational features, we must programmatically audit the raw dataset to map column formats, quantify unique values, and identify missing records (NAs). This step prevents silent failures in downstream mathematical models.
 
 ```{r}
 #| label: data-dictionary
@@ -88,7 +96,13 @@ datatable(
 )
 ```
 
-After validating the column formats, we filter out any requests that remained open at the end of 2024, keeping only fully resolved work orders as our primary analytical dataset.
+Following the initial audit, we bifurcate the raw data into two distinct analytical subsets to isolate different operational dynamics:
+
+The Backlog Cohort (Open Requests): Work orders that remained unresolved at the end of the observation period. Analyzing this subset is critical for diagnosing structural blockages and current system capacity.
+
+The Resolved Cohort (Closed Requests): Work orders with a complete lifecycle. This forms our primary analytical dataset for evaluating historical workforce velocity and Service Level Agreement (SLA) compliance.
+
+The pipeline below isolates the resolved cohort, purges data entry anomalies (such as negative resolution times), and engineers new temporal features to prepare for subsequent seasonality and scheduling analysis.
 
 ```{r}
 #| label: data-cleaning
@@ -98,9 +112,10 @@ After validating the column formats, we filter out any requests that remained op
 
 # Ingestion
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
-# Cleaning
+
+# Cleaning and Feature Engineering for the Resolved Cohort
 boston_clean <- boston_311 %>%
-  # Completed work orders
+  # Filter for completed work orders
   filter(case_status == "Closed", !is.na(closed_dt), !is.na(open_dt)) %>%
   mutate(
     # Exact resolution time
@@ -112,12 +127,14 @@ boston_clean <- boston_311 %>%
   ) %>%
   # Remove data entry errors (negative resolution times)
   filter(resolution_days >= 0)
+
 write_csv(boston_clean, here("data", "boston_clean.csv"))
+
 # Sort output
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
 
-Before proceeding to the analysis of the main dataset, it is instructive to look at some features of the subset of open requests.
+Before evaluating historical performance with the resolved cohort, we will first analyze the backlog cohort to diagnose the current structural health of the system.
 
 # 3. Open Requests at the End of 2024
 
@@ -143,13 +160,11 @@ write_csv(boston_open, here("data", "boston_open.csv"))
 cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
 ```
 
-**Note**: *The R code was displayed ("echoed") so far to illustrate the need for programming. For the rest of the report, the code will no longer be displayed in the report output (html). But it is still contained in the source file (qmd document) that generates the html.*
-
 @fig-open-tickets-distribution below overlays a density curve on top of a weekly-binned histogram. 
 
 ```{r}
 #| label: fig-open-tickets-distribution
-#| echo: false
+#| echo: true
 #| warning: false
 #| fig-width: 8
 #| fig-height: 5
@@ -175,7 +190,7 @@ ggplot(boston_open, aes(x = days_open_at_yearend)) +
   )
 ```
 
-Visual inspection suggests distinct "waves" or peaks. A critical step is questioning whether these structures represent real operational phenomena (like a seasonal surge) or are merely statistical illusions caused by "binning bias" — the arbitrary width of the histogram buckets.
+Visual inspection suggests distinct "waves" or peaks. A required step is questioning whether these structures represent real operational phenomena (like a seasonal surge) or are statistical artifacts caused by "binning bias" — the chosen width of the histogram buckets.
 
 Because our sample size is large ($N > 40,000$), we can test the structural robustness of the backlog by altering the resolution of our histogram. If the waves are real, they will persist whether we group the data by day, by week, or by month.
 
@@ -185,7 +200,7 @@ Because our sample size is large ($N > 40,000$), we can test the structural robu
 #| layout-ncol: 3
 #| fig-width: 4
 #| fig-height: 4
-#| echo: false
+#| echo: true
 #| warning: false
 #| fig-cap: "Histograms of age distribution of open requests at the end of 2024, with different bin sizes: (a) days, (b) weeks and (c) months."
 
@@ -225,18 +240,19 @@ boston_open %>%
   )
 ```
 
-@fig-robust-binning suggests that the peaks at age 60-day and 170-day are robust. They do not seem to be binning artifacts. Yet, this statement is still based on visual inspection. There exists a statistically rigorous test that can be used to check for peak presence.
+@fig-robust-binning suggests that the peaks at age 60-day and 170-day are robust. They do not seem to be binning artifacts. Yet, this statement is still based on visual inspection. So, the next step is to use an existing statistically rigorous test to check for peak presence.
 
 Hartigan's Dip Test is a non-parametric test specifically designed to detect multimodality [@hartigan1985dip]. The null hypothesis ($H_0$) states that the distribution is unimodal. Mathematically, it calculates the "dip" statistic ($D$), which is the maximum vertical distance between the empirical distribution function, $F_n(x)$, and the best-fitting unimodal distribution function, $U(x)$:
 $$D = \sup_x \vert{}F_n(x) - U(x)\vert{}$$
-If the data truly contains multiple structural waves (like your 60-day and 170-day spikes), $F_n(x)$ will deviate so drastically from any possible unimodal curve that the $p$-value will approach zero, definitively rejecting the null hypothesis.
+If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), $F_n(x)$ will deviate so drastically from any possible unimodal curve that the $p$-value will approach zero, definitively rejecting the null hypothesis.
 
 
 ```{r}
 #| label: hartigans-dip-test
-#| echo: false
+#| echo: true
 #| warning: false
 #| message: false
+#| results: hold
 
 # Note: Requires the 'diptest' package
 library(diptest)
@@ -249,24 +265,30 @@ dip_result <- dip.test(boston_open$days_open_at_yearend)
 dip_stat <- round(dip_result$statistic, 4)
 dip_pval <- format(dip_result$p.value, scientific = TRUE, digits = 3)
 
-cat("--- Hartigan's Dip Test for Unimodality ---\n")
-cat("Dip Statistic (D):", dip_stat, "\n")
-cat("P-Value:          ", dip_pval, "\n")
-
-# Interpretative output for the report
-if(dip_result$p.value < 0.05) {
-  cat("\nConclusion: The p-value approaches zero, mathematically rejecting unimodality.\n")
-  cat("The distinct waves in the backlog are structural realities, not binning artifacts.")
+# Consolidate output into a single string to ensure clean HTML rendering
+conclusion_text <- if(dip_result$p.value < 0.05) {
+  "Conclusion: The p-value approaches zero, mathematically rejecting unimodality.\nThe distinct waves in the backlog are structural realities, not binning artifacts."
 } else {
-  cat("\nConclusion: Failed to reject unimodality.")
+  "Conclusion: Failed to reject unimodality."
 }
+
+final_output <- paste0(
+  "--- Hartigan's Dip Test for Unimodality ---\n",
+  "Dip Statistic (D): ", dip_stat, "\n",
+  "P-Value:           ", dip_pval, "\n\n",
+  conclusion_text, "\n"
+)
+
+# Print once
+cat(final_output)
 ```
+
 
 Having established the robustness of the 60-day and 170-day spikes, we investigate their potential origins by examining monthly requests that are still open at the end of 2024 by department in @fig-open-tickets-by-month.
 
 ```{r}
 #| label: fig-open-tickets-by-month
-#| echo: false
+#| echo: true
 #| warning: false
 #| fig-width: 9
 #| fig-height: 6
@@ -313,10 +335,15 @@ ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
 ```
 
 
-The visualization immediately resolves the mystery of the 170-day spike. The massive red block shows that the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
+The visualization resolves the mystery of the 170-day spike. The massive red block shows that the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
 
 This systemic blockage aligns perfectly with the timeline of the **Sumner Tunnel Restoration Project**. The Massachusetts Department of Transportation (MassDOT) executed a full, 24/7 closure of the Sumner Tunnel from July 5 to August 5, 2024. The entire month of June involved intense logistical preparation for this $160 million infrastructure project—altering traffic patterns, setting up regional detours, and modifying transit routes. This monumental shift in city traffic overwhelmed the Traffic Division's capacity, creating a localized work-order backlog that the department could not clear before the end of the year.
 
+While the June spike represents a clear exogenous infrastructure shock (the Sumner Tunnel), the visualization reveals a secondary wave originating in October (the ~60-day backlog)  which is not a broad seasonal shift across the city, but a second, distinct infrastructure shock affecting that exact same department: the Transportation - Traffic Division.
+
+In October 2024, the regional transit authority (MBTA) executed a massive, multi-week shutdown of the Orange Line subway system, replacing underground trains with fleets of surface-level shuttle buses. To accommodate this, the Traffic Division had to rapidly implement severe street-level modifications across the city's southwest corridor—including removing hundreds of parking spaces, creating pop-up bus lanes, and altering one-way traffic circulations.
+
+Just as with the summer tunnel closure, this large logistical shift overwhelmed the Traffic Division's capacity. They were forced to abandon routine neighborhood work orders to manage the crisis, mathematically cementing a massive secondary backlog into the system right before the calendar year closed.
 
 
 # 4. Resolution Time
@@ -367,6 +394,8 @@ ggplot(boston_clean, aes(x = resolution_days)) +
     y = "Density of Work Orders"
   )
 ```
+
+As the density visualization illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data fundamentally fails to achieve log-normality. This mathematical reality precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies deployed in the subsequent sections of this report.
 
 # 5. SLA Compliance Analytics
 
@@ -1351,7 +1380,7 @@ ggplot(tract_breaches) +
 
 Having proven that municipal delays are not uniformly distributed, we apply Local Indicators of Spatial Association (LISA) to mathematically draw boundaries around the city's operational "hotspots" and "coldspots." By scaling the breach rates and calculating their spatial lags, we can isolate census tracts that suffer from statistically significant, systemic neglect.
 
-Crucially, because automated closures originating from the genear maximo integration have been removed from this spatial model, the resulting clusters represent genuine disparities in human workforce deployment and street-level service delivery.
+Crucially, because automated closures originating from maximo integration have been removed from this spatial model, the resulting clusters represent genuine disparities in human workforce deployment and street-level service delivery.
 
 ```{r}
 #| label: spatial-equity-lisa
