@@ -63,10 +63,11 @@ Boston’s geographic districts and digital queues serve as a practical analog f
 Data validation is the foundation of rigorous analysis. Before formatting operational features, we programmatically audit the raw dataset to map column types, quantify unique values, and identify missing records (NAs). This prevents silent failures in downstream mathematical models.
 
 ```{r}
-#| label: data-dictionary
+#| label: tbl-data-dictionary
 #| message: false
 #| warning: false
-#| echo: true
+#| echo: false
+#| tbl-cap: "Dataset Overview: Column types, unique values, and missing data."
 
 library(dplyr)
 library(DT)
@@ -105,7 +106,7 @@ The pipeline below isolates the resolved cohort, purges data entry anomalies (e.
 #| label: data-cleaning
 #| message: false
 #| warning: false
-#| echo: true
+#| echo: false
 
 # Ingestion
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
@@ -139,7 +140,7 @@ We now dig into the subset of open requests. This will provide an example of how
 #| label: isolate-open-cases
 #| message: false
 #| warning: false
-#| echo: true
+#| echo: false
 
 # Tickets still open at the end of 2024
 boston_open <- boston_311 %>%
@@ -158,7 +159,7 @@ cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
 
 ```{r}
 #| label: fig-open-tickets-distribution
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-width: 8
 #| fig-height: 5
@@ -194,7 +195,7 @@ Because our sample size is large ($N > 40,000$), we can test the robustness of t
 #| layout-ncol: 3
 #| fig-width: 4
 #| fig-height: 4
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-cap: "Histograms of age distribution of open requests at the end of 2024, with different bin sizes: (a) days, (b) weeks and (c) months."
 
@@ -240,7 +241,7 @@ If the data truly contains multiple structural waves (like the 60-day and 170-da
 
 ```{r}
 #| label: hartigans-dip-test
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| results: hold
@@ -274,7 +275,7 @@ Having established the robustness of the 60-day and 170-day spikes, we investiga
 
 ```{r}
 #| label: fig-open-tickets-by-month
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-width: 9
 #| fig-height: 6
@@ -336,11 +337,12 @@ This long tail artificially inflates the mean, distorting the true operational b
 
 
 ```{r}
-#| label: resolution-density-log
-#| echo: true
+#| label: fig-resolution-density-log
+#| echo: false
 #| warning: false
 #| fig-width: 8
 #| fig-height: 5
+#| fig-cap: "Density of Maintenance Resolution Times (Log Scale)"
 
 library(scales) 
 
@@ -390,11 +392,11 @@ We now analyze the distribution of the SLA Delta (Actual Resolution Time minus S
 
 ```{r}
 #| label: fig-sla-delta-distribution
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-width: 8
 #| fig-height: 5
-#| fig-cap: "distribution of SLA Delta."
+#| fig-cap: "Distribution of SLA Delta."
 
 # Calculate the exact delta in days
 sla_delta_data <- boston_clean %>%
@@ -436,7 +438,6 @@ Because the dataset contains right-tail outliers, traditional variance-based tes
 
 To correctly capture the true operational reality, we abandon variance and compare the **Empirical Cumulative Distribution Functions (ECDFs)** using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.
 
-
 First, we define $F_{global}(x)$ as the ECDF of the SLA Delta for the entire city-wide portfolio. For any given factor (e.g., Department), we split the data into $K$ individual levels (subgroups). We then define $F_k(x)$ as the ECDF for a specific subgroup $k$.
 
 The standard K-S statistic $D_k$ measures the maximum absolute vertical distance between the subgroup's ECDF and the global ECDF:
@@ -447,7 +448,7 @@ This outputs a bounded value between $0$ (identical distributions) and $1$ (zero
 
 ```{r}
 #| label: fig-ks-statistic-explanation
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-width: 9
 #| fig-height: 6
@@ -536,17 +537,10 @@ $$D_{weighted} = \sum_{k=1}^{K} \left( \frac{n_k}{N} \right) D_k$$
 
 Where $n_k$ is the total number of work orders in subgroup $k$, and $N$ is the total volume across all subgroups. This penalizes noisy variance from tiny subgroups and rewards factors where massive subsets of work fundamentally deviate from the global baseline.
 
-Applying this non-parametric ranking to all organizational, task-based, and geographic features reveals a clear hierarchy of variance drivers.
-
-**Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
-
-**WARNING: The Geographic Equity Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking as proof of the null hypothesis—falsely concluding that because geographic features do not explain the variance, geographic equity exists. The only correct statement for a large p-value is: "The test failed to reject the null hypothesis". Failure to reject is not equivalent to proving that the null hypothesis is true.
-
-This is mathematically invalid. Failing to reject the null hypothesis here only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
 
 ```{r}
 #| label: feature-dependency-ks
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 
@@ -592,10 +586,13 @@ ks_results <- map_dfr(factors_to_test, ~calc_weighted_ks(.x, sla_delta_data, glo
   )
 ```
 
+Applying this non-parametric ranking to all organizational, task-based, and geographic features reveals a clear hierarchy of variance drivers displayed in @tbl-factor-ranking.
+
+
 ```{r}
 #| label: tbl-factor-ranking
 #| tbl-cap: "Factor Dependency Ranking (Weighted K-S Distance)"
-#| echo: true
+#| echo: false
 #| warning: false
 
 library(knitr)
@@ -608,6 +605,11 @@ kable(
 )
 ```
 
+
+**Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
+
+**WARNING: The Geographic Equity Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common **statistical mistake** is interpreting this low ranking as proof of the null hypothesis—falsely concluding that because geographic features do not explain the variance, geographic equity exists. The only correct statement for a large p-value is: "The test failed to reject the null hypothesis". Failure to reject is not equivalent to proving that the null hypothesis is true. Failing to reject the null hypothesis here only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
+
 ### 5.2.3 Result Illustration with Histograms
 
 While the K-S statistic is mathematically robust against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).
@@ -616,10 +618,11 @@ By coloring the overall SLA Delta histogram by the top digital queues, we visual
 
 ```{r}
 #| label: fig-queue-histogram
-#| echo: true
+#| echo: false
 #| warning: false
 #| fig-width: 9
 #| fig-height: 7
+#| fig-cap: "SLA Delta Histogram"
 
 # Isolate the top 4 queues to compare against the global background
 top_queues <- sla_delta_data %>%
@@ -679,37 +682,6 @@ Given the computational weight of Transformer models, the initial Python classif
 
 We utilized BERTopic [@grootendorst2022] combined with a [Hugging Face embedding model](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) to group the closure notes into distinct operational bottlenecks.
 
-```python
-#| label: bertopic-pipeline
-#| eval: false
-#| echo: true
-
-import pandas as pd
-from bertopic import BERTopic
-from sentence_transformers import SentenceTransformer
-
-# Load the SLA-filtered dataset
-df = pd.read_csv("../data/boston_clean.csv") 
-df = df.dropna(subset=['closure_reason'])
-docs = df['closure_reason'].tolist()
-# Initialize the Embedding Model on Apple Silicon GPU
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="mps")
-# Fit BERTopic to discover operational clusters 
-topic_model = BERTopic(
-    embedding_model=embedding_model,
-    min_topic_size=50, 
-    calculate_probabilities=False
-)
-topics, probs = topic_model.fit_transform(docs)
-# Merge the AI-generated Topic Names back to the dataset
-df['topic_id'] = topics
-topic_info = topic_model.get_topic_info()
-df = df.merge(topic_info[['Topic', 'Name']], left_on='topic_id', right_on='Topic', how='left')
-df = df.rename(columns={'Name': 'ai_topic_name'})
-# Export for reporting
-df.to_csv("../data/boston_bertopic_results.csv", index=False)
-```
-
 ### 6.2 Visualizing the AI Clusters
 
 With the AI having categorized the unstructured text, we can now visualize the exact volume of delayed tickets attributed to each systemic issue. We apply a lightweight text-cleaning function in R to make the raw c-TF-IDF (Class-based Term Frequency-Inverse Document Frequency) labels readable. Unlike standard TF-IDF which evaluates individual documents, c-TF-IDF treats all documents in a single cluster as a single super-document, mathematically extracting the words that make that specific operational cluster unique compared to all others.
@@ -717,8 +689,8 @@ With the AI having categorized the unstructured text, we can now visualize the e
 (Note: BERTopic assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern).
 
 ```{r}
-#| label: plot-bertopic-results
-#| echo: true
+#| label: fig-plot-bertopic-results
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 10
@@ -768,11 +740,12 @@ While the plots above successfully utilize the mathematical c-TF-IDF keyword str
 To bridge the gap between machine-readable statistics and executive-ready dashboards, we execute a 100% offline workflow using R's httr package to query a local Llama 3 instance via Ollama. This acts as an automated formatting bot, applying municipal context to translate the raw statistical outputs into polished categories. We will use these clean labels for subsequent analysis.
 
 ```{r}
-#| label: llm-topic-translation
-#| echo: true
+#| label: tbl-llm-topic-translation
+#| echo: false
 #| warning: false
 #| message: false
 #| cache: true
+#| tbl-cap: "Automated Topic Translation via Local Llama 3 (Offline API)"
 
 library(dplyr)
 library(purrr)
@@ -838,7 +811,7 @@ Using Standardized Pearson Residuals from a Chi-Square test, the heatmap in @fig
 
 ```{r}
 #| label: fig-topic-factor-enrichment
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 10
@@ -912,7 +885,7 @@ We first look at the aggregate stress placed on Boston's municipal infrastructur
 
 ```{r}
 #| label: fig-seasonal-trends-global
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 10
@@ -973,7 +946,7 @@ While the citywide view provides the baseline, operational failures are rarely d
 
 ```{r}
 #| label: fig-seasonal-trends-department
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 12
@@ -1045,7 +1018,7 @@ To capture the true operational reliability of the city, we apply time-to-event 
 
 ```{r}
 #| label: fig-survival-analysis-departments
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 10
@@ -1179,7 +1152,11 @@ ggplot(tidy_cox, aes(x = estimate, y = clean_term, color = is_significant)) +
 
 In the multivariate forest plot, the central dashed line at 1.00 establishes baseline resolution speed. Dots represent the Hazard Ratio (HR)—a direct speed multiplier. Variables to the right (HR > 1) accelerate resolution; those to the left (HR < 1) act as bottlenecks. The horizontal bars indicate 95% confidence intervals. Because none cross the baseline, we can state with 95% statistical confidence that these variables genuinely impact workforce velocity, rejecting the possibility of random anomalies.
 
-Filtering out automated "Maximo Integration" API calls isolates true human labor, revealing that resolution speed heavily depends on departmental capacity and intake friction. Public Works (PWDx) operates at nearly double the baseline speed, validating its rapid triage design, while Parks (PARK) faces a 35% speed deficit from long-tail bottlenecks. Furthermore, manual intake channels like phone calls introduce administrative friction, slowing resolution pipelines by roughly 22% compared to digitally precise reporting.
+Filtering out automated "Maximo Integration" API calls isolates true human labor, revealing that resolution speed heavily depends on departmental capacity and intake friction. 
+
+* **Public Works (PWDx)** operates at nearly double the baseline speed, validating its rapid triage design
+* **Parks (PARK)** faces a 35% speed deficit from long-tail bottlenecks. 
+* **INFO**: manual intake channels like phone calls introduce administrative friction, slowing resolution pipelines by roughly 22% compared to digitally precise reporting.
 
 # 9. System Stability: Queueing Theory and Backlog Velocity
 
@@ -1187,7 +1164,7 @@ While Survival Analysis evaluates the lifespan of individual tickets, it does no
 
 ```{r}
 #| label: fig-queue-velocity-analysis
-#| echo: true
+#| echo: false
 #| warning: false
 #| message: false
 #| fig-width: 12
@@ -1342,7 +1319,9 @@ ggplot(tract_breaches) +
   )
 ```
 
-@fig-spatial-equity-morans-i shows that the spatial distribution of service delays is far from random. The calculated Global Moran's I statistic of 0.25, coupled with a $p$-value of $1.37 \times 10^{-9}$, mathematically rejects the null hypothesis of spatial randomness. Visually, the map strongly corroborates this test: census tracts experiencing severe SLA breach rates (the bright orange and yellow zones exceeding 30%) are geographically contiguous, forming structural "hotspots" of operational delay. Conversely, neighborhoods receiving highly efficient service (the dark purple and black zones hovering around a 10% breach rate) form their own distinct, localized clusters. This definitive spatial autocorrelation proves that the promptness of municipal service is systematically tied to geographic location.
+@fig-spatial-equity-morans-i shows that the spatial distribution of service delays is far from random. The calculated Global Moran's I statistic of 0.25, coupled with a $p$-value of $1.37 \times 10^{-9}$, mathematically rejects the null hypothesis of spatial randomness. 
+
+Visually, the map strongly corroborates this test: census tracts experiencing severe SLA breach rates (the bright orange and yellow zones exceeding 30%) are geographically contiguous, forming structural "hotspots" of operational delay. Conversely, neighborhoods receiving highly efficient service (the dark purple and black zones hovering around a 10% breach rate) form their own distinct, localized clusters. This definitive spatial autocorrelation proves that the promptness of municipal service is systematically tied to geographic location.
 
 ## 10.2 Localized Clusters of Neglect (LISA)
 
@@ -1418,10 +1397,1173 @@ ggplot(lisa_tracts) +
 
 The LISA analysis identifies three distinct "High-High" clusters of systemic neglect (highlighted in red) that are geographically separated from the city's central core:
 
-The Western Cluster (Allston-Brighton): The largest contiguous zone of delayed service dominates the far western edge of the city.
+**Western Cluster (Allston-Brighton)**: The largest contiguous zone of delayed service dominates the far western edge of the city.
 
-The Northeast Cluster (East Boston): A secondary significant zone of systemic delay encompasses the northeast peninsula, bounded by Boston Harbor.
+**Northeast Cluster (East Boston)**: A secondary significant zone of systemic delay encompasses the northeast peninsula, bounded by Boston Harbor.
 
-The Northern Cluster (Charlestown): A third, smaller pocket of concentrated SLA breaches is situated on the northern peninsula across the Charles River.
+**Northern Cluster (Charlestown)**: A third, smaller pocket of concentrated SLA breaches is situated on the northern peninsula across the Charles River.
 
 Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicating localized clusters of exceptionally prompt service delivery—are positioned centrally, situated within and immediately adjacent to the downtown municipal core. This spatial reality demonstrates that while service delays are not randomly distributed, they form distinct, localized geographic pockets that merit targeted operational review.
+
+# Appendix: R and Python Code
+
+## Section 1
+
+```{r}
+#| label: ingest-A
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
+```
+
+## Section 2
+
+```{r}
+#| label: data-dictionary-A
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+library(dplyr)
+library(DT)
+
+# Overall dimensions
+cat("Dataset Dimensions:", format(nrow(boston_311), big.mark = ","), "rows and", ncol(boston_311), "columns.\n\n")
+# Column-summary dataframe
+data_summary <- tibble(
+  Column = names(boston_311),
+  Type = sapply(boston_311, function(x) paste(class(x), collapse = ", ")),
+  Unique_Values = sapply(boston_311, n_distinct),
+  Missing_Values = sapply(boston_311, function(x) sum(is.na(x)))
+)
+# Interactive HTML table
+datatable(
+  data_summary,
+  rownames = FALSE,
+  options = list(
+    pageLength = 10, 
+    autoWidth = TRUE,
+    dom = 'tp' # Keeps the interface clean (just table and pagination)
+  ),
+  caption = "Dataset Overview: Column types, unique values, and missing data."
+)
+```
+
+```{r}
+#| label: data-cleaning-A
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# Ingestion
+boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
+# Cleaning and Feature Engineering for the Resolved Cohort
+boston_clean <- boston_311 %>%
+  # Filter for completed work orders
+  filter(case_status == "Closed", !is.na(closed_dt), !is.na(open_dt)) %>%
+  mutate(
+    # Exact resolution time
+    resolution_days = as.numeric(difftime(closed_dt, open_dt, units = "days")),
+    # Temporal features for seasonality and scheduling analysis
+    open_month = month(open_dt, label = TRUE, abbr = TRUE),
+    open_wday = wday(open_dt, label = TRUE, abbr = TRUE, week_start = 1), # Monday = 1
+    open_hour = hour(open_dt)
+  ) %>%
+  # Remove data entry errors (negative resolution times)
+  filter(resolution_days >= 0)
+write_csv(boston_clean, here("data", "boston_clean.csv"))
+# Sort output
+cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
+```
+
+## Section 3
+
+```{r}
+#| label: isolate-open-cases-A
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# Tickets still open at the end of 2024
+boston_open <- boston_311 %>%
+  filter(case_status == "Open" | is.na(closed_dt)) %>%
+  mutate(
+    open_month = month(open_dt, label = TRUE, abbr = TRUE),
+    # Ticket age as of the end of the 2024 calendar year
+    days_open_at_yearend = as.numeric(difftime(as.POSIXct("2024-12-31 23:59:59"), open_dt, units = "days"))
+  )
+write_csv(boston_open, here("data", "boston_open.csv"))
+# Short output
+cat("Isolated", format(nrow(boston_open), big.mark = ","), "open records.\n\n")
+```
+
+```{r}
+#| label: fig-open-tickets-distribution-A
+#| echo: true
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+#| fig-cap: "Age distribution of open requests at the end of 2024."
+#| eval: false
+
+ggplot(boston_open, aes(x = days_open_at_yearend)) +
+  # Histogram with a 7-day binwidth to represent weekly operational cycles
+  geom_histogram(aes(y = after_stat(density)), binwidth = 7, fill = "lightgray", color = "white") +
+  # Density overlay to highlight the overall shape and search for bimodality
+  geom_density(color = "darkred", linewidth = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 365, by = 60)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Age Distribution of Open Requests at Year-End",
+    subtitle = "Investigating bimodality: Active recent backlog vs. stagnant long-term requests.",
+    x = "Days Open (as of Dec 31, 2024)",
+    y = "Density (Proportion of Open Work Orders)"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+#| label: fig-robust-binning-A
+#| fig-subcap: true
+#| layout-ncol: 3
+#| fig-width: 4
+#| fig-height: 4
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-cap: "Histograms of age distribution of open requests at the end of 2024, with different bin sizes: (a) days, (b) weeks and (c) months."
+
+# Base plot for the first two charts mapping continuous days
+p_base <- ggplot(boston_open, aes(x = days_open_at_yearend)) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 365, by = 120)) +
+  labs(x = "Days Open (as of Dec 31)", y = "Volume of Open Tickets") +
+  theme(plot.title = element_text(size = 11, face = "bold"))
+# Daily Binning
+p_base + 
+  geom_histogram(binwidth = 1, fill = "darkgray", color = "white", linewidth = 0.1) +
+  labs(title = "Daily Resolution (1-Day Bins)")
+# Weekly Binning
+p_base + 
+  geom_histogram(binwidth = 7, fill = "steelblue", color = "white", linewidth = 0.2) +
+  labs(title = "Weekly Resolution (7-Day Bins)")
+# Calendar Months
+boston_open %>%
+  # Reverse the month levels so December (newest) is on the left, matching the 0-365 days flow
+  mutate(open_month_rev = factor(open_month, levels = rev(levels(open_month)))) %>%
+  ggplot(aes(x = open_month_rev)) +
+  geom_bar(fill = "darkred", color = "white", linewidth = 0.2) +
+  theme_minimal() +
+  labs(
+    title = "Monthly Resolution (Calendar)",
+    x = "Month Opened (Newest to Oldest)", 
+    y = "Volume of Open Tickets"
+  ) +
+  theme(
+    plot.title = element_text(size = 11, face = "bold"),
+    # Angle the text slightly to ensure all 12 month labels fit cleanly
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+```{r}
+#| label: hartigans-dip-test-A
+#| echo: true
+#| warning: false
+#| message: false
+#| results: hold
+#| eval: false
+
+library(diptest)
+library(dplyr)
+
+# Test on the continuous days open variable
+dip_result <- dip.test(boston_open$days_open_at_yearend)
+# Extract and format the results
+dip_stat <- round(dip_result$statistic, 4)
+dip_pval <- format(dip_result$p.value, scientific = TRUE, digits = 3)
+# Consolidate output into a single string
+conclusion_text <- if(dip_result$p.value < 0.05) {
+  "Conclusion: The p-value approaches zero, mathematically rejecting unimodality.\nThe distinct waves in the backlog are structural realities, not binning artifacts."
+} else {
+  "Conclusion: Failed to reject unimodality."
+}
+
+final_output <- paste0(
+  "--- Hartigan's Dip Test for Unimodality ---\n",
+  "Dip Statistic (D): ", dip_stat, "\n",
+  "P-Value:           ", dip_pval, "\n\n",
+  conclusion_text, "\n"
+)
+cat(final_output)
+```
+
+```{r}
+#| label: fig-open-tickets-by-month-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 6
+#| fig-cap: "Visualization of departments contributions to open requests at the end of 2024 by starting month (Note that the month order is the reverse of that in @fig-robust-binning (c))."
+
+# Identify the top 4 departments with the most open tickets
+top_open_subjects <- boston_open %>%
+  count(subject, sort = TRUE) %>%
+  slice_head(n = 4) %>%
+  pull(subject)
+# Group the data for the stacked visualization
+plot_data_open <- boston_open %>%
+  mutate(
+    subject_grouped = ifelse(subject %in% top_open_subjects, subject, "All Other Departments"),
+    # Factor to ensure the grey baseline sits at the bottom of the stack
+    subject_grouped = factor(subject_grouped, levels = c("All Other Departments", top_open_subjects))
+  )
+# Generate the bar chart
+ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
+  geom_bar(color = "white", linewidth = 0.2) +
+  scale_fill_manual(
+    values = c(
+      "All Other Departments" = "grey80",
+      # Using a clear, distinct color palette for the top culprits
+      setNames(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3"), top_open_subjects)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Year-End Backlog by Month of Origin",
+    subtitle = "Exploratory view: Identifying seasonal waves and departmental bottlenecks.",
+    x = "Month Ticket Was Opened",
+    y = "Volume of Open Tickets at Year-End",
+    fill = "Department"
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9)
+  ) +
+  guides(fill = guide_legend(ncol = 2, reverse = TRUE))
+```
+
+## Section 4
+
+```{r}
+#| label: resolution-density-log-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+
+library(scales) 
+
+# Summary stats 
+res_summary <- boston_clean %>%
+  summarise(
+    Mean = mean(resolution_days, na.rm = TRUE),
+    Median = median(resolution_days, na.rm = TRUE)
+  )
+ggplot(boston_clean, aes(x = resolution_days)) +
+  geom_density(fill = "steelblue", color = "darkblue", alpha = 0.5) +
+  geom_vline(xintercept = res_summary$Mean, color = "darkred", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = res_summary$Median, color = "black", linetype = "solid", linewidth = 1) +
+  # log1p transformation safely handles 0-day resolutions
+  scale_x_continuous(
+    trans = "log1p",
+    breaks = c(0, 1, 3, 10, 30, 100, 365),
+    labels = label_comma()
+  ) +
+  # Setting y = Inf and adjusting vjust pins the labels to the top of the plot
+  annotate("text", x = res_summary$Mean, y = Inf, 
+           label = paste("Mean:\n", round(res_summary$Mean, 1), "days"), 
+           color = "darkred", hjust = -0.2, vjust = 1.5, size = 4, fontface = "bold") +
+  annotate("text", x = res_summary$Median, y = Inf, 
+           label = paste("Median:\n", round(res_summary$Median, 1), "days"), 
+           color = "black", hjust = 1.2, vjust = 1.5, size = 4, fontface = "bold") +
+  theme_minimal() +
+  labs(
+    title = "Density of Maintenance Resolution Times (Log Scale)",
+    subtitle = "A log1p scale stretches the immediate closures while revealing the true span of the multi-month right tail.",
+    x = "Days to Close (Log Scale)",
+    y = "Density of Work Orders"
+  )
+```
+
+## Section 5
+
+```{r}
+#| label: fig-sla-delta-distribution-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 5
+#| fig-cap: "distribution of SLA Delta."
+
+# Calculate the exact delta in days
+sla_delta_data <- boston_clean %>%
+  filter(!is.na(sla_target_dt), subject != "Animal Control") %>%
+  mutate(
+    sla_delta_days = as.numeric(difftime(closed_dt, sla_target_dt, units = "days")),
+    # Categorize for the plot fill
+    compliance_status = ifelse(sla_delta_days <= 0, "On Time (Early)", "Overdue (Late)")
+  )
+# Plot the distribution of the delta
+ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
+  # boundary = 0 added here to prevent overlapping bins at zero
+  geom_histogram(binwidth = 1, boundary = 0, color = "white", alpha = 0.8) +
+  # Add the hard SLA deadline reference line
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 1) +
+  scale_fill_manual(values = c("On Time (Early)" = "steelblue", "Overdue (Late)" = "darkred")) +
+  # Zoom the x-axis to a relevant operational window (e.g., 30 days early to 30 days late)
+  coord_cartesian(xlim = c(-30, 30)) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of SLA Delta",
+    subtitle = "The variance of actual closure times relative to their expected deadlines.",
+    x = "SLA Delta (Days)",
+    y = "Volume of Work Orders",
+    fill = "Status"
+  ) +
+  theme(legend.position = "top")
+```
+
+```{r}
+#| label: fig-ks-statistic-explanation-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 6
+#| fig-cap: "Graphical explanation of the Kolmogorov-Smirnov statistic."
+
+# Identify a "Goldilocks" subgroup (high volume, moderate D_k around 0.35)
+global_dist <- sla_delta_data$sla_delta_days
+illustrative_group <- sla_delta_data %>%
+  group_by(type) %>%
+  filter(n() > 5000) %>% 
+  summarise(
+    ks_stat = suppressWarnings(ks.test(sla_delta_days, global_dist)$statistic),
+    .groups = "drop"
+  ) %>%
+  mutate(diff_from_target = abs(ks_stat - 0.35)) %>%
+  arrange(diff_from_target) %>%
+  slice(1)
+max_type_name <- illustrative_group$type
+max_type_dist <- sla_delta_data %>% filter(type == max_type_name) %>% pull(sla_delta_days)
+# Calculate the exact point of maximum vertical distance
+x_vals <- sort(unique(c(global_dist, max_type_dist)))
+ecdf_global_vals <- ecdf(global_dist)(x_vals)
+ecdf_max_vals <- ecdf(max_type_dist)(x_vals)
+diffs <- abs(ecdf_global_vals - ecdf_max_vals)
+max_idx <- which.max(diffs)
+x_max_diff <- x_vals[max_idx]
+y_global <- ecdf_global_vals[max_idx]
+y_max <- ecdf_max_vals[max_idx]
+max_d_stat <- diffs[max_idx]
+# Define dynamic labels to map math notation to the data
+global_label <- "F_global : Global Baseline"
+subgroup_label <- paste0("F_k : '", max_type_name, "' (Factor: type)")
+# Create the dataset for plotting
+plot_data <- sla_delta_data %>%
+  mutate(Curve = global_label) %>%
+  bind_rows(
+    sla_delta_data %>%
+      filter(type == max_type_name) %>%
+      mutate(Curve = subgroup_label)
+  )
+# Generate the explanatory plot
+ggplot(plot_data, aes(x = sla_delta_days, color = Curve)) +
+  stat_ecdf(linewidth = 1) +
+  # Add the vertical segment illustrating D_k
+  annotate("segment", x = x_max_diff, xend = x_max_diff,
+           y = y_global, yend = y_max,
+           color = "darkred", linewidth = 1.2, 
+           arrow = arrow(ends = "both", length = unit(0.1, "inches"))) +
+  # Annotate the exact D_k value mathematically
+  annotate("text", x = x_max_diff + 2, y = mean(c(y_global, y_max)),
+           label = paste0("D[k] == ", round(max_d_stat, 3)), parse = TRUE,
+           color = "darkred", hjust = 0, size = 5, fontface = "bold") +
+  # Reference line for the SLA deadline (0 days)
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", alpha = 0.5) +
+  # Map colors directly to the new dynamic labels
+  scale_color_manual(values = setNames(c("darkgray", "steelblue"), c(global_label, subgroup_label))) +
+  # Lock the zoom back to the critical operational window
+  coord_cartesian(xlim = c(-30, 30)) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    title = "Visualizing the Kolmogorov-Smirnov Statistic",
+    subtitle = "The D_k statistic represents the maximum absolute vertical distance between the global distribution\nand a specific subgroup (in this example, the 'Parking Enforcement' level of the 'type' factor).",
+    x = "SLA Delta (Days)",
+    y = "Cumulative Proportion of Tickets Closed",
+    color = NULL
+  ) +
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 11, face = "bold")
+  )
+```
+
+```{r}
+#| label: feature-dependency-ks-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+
+library(purrr)
+library(dplyr)
+
+# Global baseline distribution
+global_dist <- sla_delta_data$sla_delta_days
+total_n <- nrow(sla_delta_data)
+factors_to_test <- c("subject", "reason", "type", "queue", "department", 
+                     "fire_district", "pwd_district", "city_council_district", 
+                     "police_district", "neighborhood", "neighborhood_services_district", 
+                     "ward", "precinct", "location_zipcode")
+# Function to calculate the Weighted K-S Distance and extract p-values
+calc_weighted_ks <- function(factor_name, data, global_dist, total_n) {
+  data %>%
+    group_split(!!sym(factor_name)) %>%
+    map_dfr(function(df) {
+      level_dist <- df$sla_delta_days
+      level_n <- nrow(df)
+      # Skip virtually empty levels to prevent test errors
+      if(level_n < 5) return(tibble(level_n = level_n, ks_stat = 0, p_val = 1))
+      # Suppress warnings for expected ties
+      ks_res <- suppressWarnings(ks.test(level_dist, global_dist))
+      tibble(
+        level_n = level_n,
+        ks_stat = ks_res$statistic,
+        p_val = ks_res$p.value
+      )
+    }) %>%
+    summarise(
+      Factor = factor_name,
+      Weighted_KS_Score = sum(ks_stat * (level_n / total_n)),
+      Median_P_Value = median(p_val)
+    )
+}
+# Map across all factors and rank
+ks_results <- map_dfr(factors_to_test, ~calc_weighted_ks(.x, sla_delta_data, global_dist, total_n)) %>%
+  arrange(desc(Weighted_KS_Score)) %>%
+  mutate(
+    Weighted_KS_Score = round(Weighted_KS_Score, 4),
+    Median_P_Value = format(Median_P_Value, scientific = TRUE, digits = 3)
+  )
+```
+
+```{r}
+#| label: factor-ranking-A
+#| echo: true
+#| eval: false
+#| warning: false
+
+library(knitr)
+
+# Generate the formal Quarto table from the previous ks_results tibble
+kable(
+  ks_results, 
+  col.names = c("Factor", "Weighted K-S Score", "Median P-Value"),
+  align = c('l', 'c', 'c')
+)
+```
+
+```{r}
+#| label: fig-queue-histogram-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 7
+
+# Isolate the top 4 queues to compare against the global background
+top_queues <- sla_delta_data %>%
+  count(queue, sort = TRUE) %>%
+  slice_head(n = 4) %>%
+  pull(queue)
+# Group all remaining data into a global baseline category
+plot_data_queue <- sla_delta_data %>%
+  mutate(
+    queue_grouped = ifelse(queue %in% top_queues, queue, "All Other Queues"),
+    # Convert to factor and put "All Other Queues" first so it renders at the bottom of the stack
+    queue_grouped = factor(queue_grouped, levels = c("All Other Queues", top_queues))
+  )
+# Generate the stacked histogram
+ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
+  geom_histogram(binwidth = 1, boundary = 0, position = "stack", color = "white", linewidth = 0.2, alpha = 0.9) +
+  # Add the SLA deadline reference line
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 1) +
+  # Zoom tightly to the central mass for higher resolution
+  coord_cartesian(xlim = c(-15, 15)) +
+  # Manually assign colors: neutral grey for the baseline, vibrant colors for the top 4
+  scale_fill_manual(
+    values = c(
+      "All Other Queues" = "grey80",
+      setNames(c("#E41A1C", "#377EB8", "#4DAF4A", "#FF7F00"), top_queues)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "SLA Delta Histogram by Top Queues",
+    subtitle = "Visualizing the K-S finding: Top queues form distinct distributions against the global baseline.",
+    x = "SLA Delta (Days)",
+    y = "Volume of Work Orders",
+    fill = "Digital Queue"
+  ) +
+  theme(
+    # Move legend to the bottom to allow more horizontal breathing room
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9)
+  ) +
+  # Force the legend to wrap into 2 columns so long department names are never cut off
+  guides(fill = guide_legend(ncol = 2, reverse = TRUE))
+```
+
+## Section 6
+
+```{python}
+#| label: bertopic-pipeline
+#| eval: false
+#| echo: true
+
+import pandas as pd
+from bertopic import BERTopic
+from sentence_transformers import SentenceTransformer
+
+# Load the SLA-filtered dataset
+df = pd.read_csv("../data/boston_clean.csv") 
+df = df.dropna(subset=['closure_reason'])
+docs = df['closure_reason'].tolist()
+# Initialize the Embedding Model on Apple Silicon GPU
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="mps")
+# Fit BERTopic to discover operational clusters 
+topic_model = BERTopic(
+    embedding_model=embedding_model,
+    min_topic_size=50, 
+    calculate_probabilities=False
+)
+topics, probs = topic_model.fit_transform(docs)
+# Merge the AI-generated Topic Names back to the dataset
+df['topic_id'] = topics
+topic_info = topic_model.get_topic_info()
+df = df.merge(topic_info[['Topic', 'Name']], left_on='topic_id', right_on='Topic', how='left')
+df = df.rename(columns={'Name': 'ai_topic_name'})
+# Export for reporting
+df.to_csv("../data/boston_bertopic_results.csv", index=False)
+```
+
+```{r}
+#| label: plot-bertopic-results-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+#| fig-cap: "Volume of SLA breaches categorized by AI-discovered operational themes."
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(here)
+
+# Read ONLY the newly generated AI columns and the Ticket ID
+ai_results <- read_csv(here("data", "boston_bertopic_results.csv")) %>%
+  select(case_enquiry_id, topic_id, ai_topic_name) 
+# Join the AI topics to your existing SLA dataset and filter
+ai_plot_data <- sla_delta_data %>%
+  inner_join(ai_results, by = "case_enquiry_id") %>%
+  filter(compliance_status == "Overdue (Late)", topic_id != -1) %>%
+  mutate(
+    clean_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_topic = str_replace_all(clean_topic, "_", " "),
+    clean_topic = str_to_title(clean_topic)
+  ) %>%
+  count(clean_topic, sort = TRUE) %>%
+  slice_head(n = 15)
+# Generate the visualization
+ggplot(ai_plot_data, aes(x = n, y = reorder(clean_topic, n))) +
+  geom_col(fill = "steelblue", color = "white", alpha = 0.9) +
+  theme_minimal() +
+  labs(
+    title = "Top Causes of Operational Delays (Discovered via AI)",
+    subtitle = "Unsupervised clustering of closure notes reveals distinct systemic bottlenecks.",
+    x = "Volume of Delayed Work Orders",
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 11, face = "bold")
+  )
+```
+
+```{r}
+#| label: llm-topic-translation-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| cache: true
+
+library(dplyr)
+library(purrr)
+library(stringr)
+library(readr)
+library(here)
+library(knitr)
+library(httr)
+
+# CLEAN FIRST, then get the Top 15 Unique topics
+ai_results <- read_csv(here("data", "boston_bertopic_results.csv"))
+topic_summary <- ai_results %>%
+  filter(topic_id != -1) %>%
+  mutate(
+    clean_raw_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_raw_topic = str_replace_all(clean_raw_topic, "_", " ")
+  ) %>%
+  count(clean_raw_topic, sort = TRUE) %>%
+  slice_head(n = 15)
+# Direct Local API with the Proper Persona
+translate_topic <- function(messy_string) {
+  sys_prompt <- "You are an expert municipal data analyst for the City of Boston. You classify messy 311 work order keywords."
+  user_prompt <- paste0(
+    "Translate this messy keyword string into a clean, 3-to-4 word operational category label (e.g., 'Equipment Maintenance', 'Duplicate Request').\n\n",
+    "Return ONLY the label. Do not include quotes, formatting, or introductory text.\n\n",
+    "Keyword: ", messy_string
+  )
+  # Send offline request directly to local Mac memory
+  res <- tryCatch({
+    POST(
+      url = "http://localhost:11434/api/generate",
+      body = list(
+        model = "llama3",
+        prompt = user_prompt,
+        system = sys_prompt,
+        stream = FALSE
+      ),
+      encode = "json",
+      timeout(30)
+    )
+  }, error = function(e) return(NULL))
+  if (is.null(res) || status_code(res) != 200) return("API Connection Failed")
+  raw_text <- content(res, as = "parsed", type = "application/json")$response
+  # Strip out any markdown or quotes the LLM tries to sneak in
+  clean_label <- str_remove_all(raw_text, '["*]') %>% str_trim()
+  return(as.character(clean_label))
+}
+# Loop through the 15 topics
+llm_clean_names <- map_chr(topic_summary$clean_raw_topic, translate_topic)
+# Build and print the crosswalk table
+topic_crosswalk <- tibble(
+  `Original c-TF-IDF String` = topic_summary$clean_raw_topic,
+  `LLM Dashboard Label` = llm_clean_names
+)
+kable(topic_crosswalk, caption = "Automated Topic Translation via Local Llama 3 (Offline API)")
+```
+
+```{r}
+#| label: fig-topic-factor-enrichment-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "Enrichment heatmap showing which AI topics are statistically over-represented across municipal departments. Department abbreviations: BTDT (Transportation), INFO (Mayor's Hotline), ISD (Inspectional Services), PARK (Parks & Recreation), PROP (Property Management), PWDx (Public Works)."
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(here)
+
+# Load the AI results and join the LLM translated labels
+ai_df <- read_csv(here("data", "boston_bertopic_results.csv")) %>%
+  filter(topic_id != -1, !is.na(department)) %>%
+  mutate(
+    clean_raw_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_raw_topic = str_replace_all(clean_raw_topic, "_", " ")
+  ) %>%
+  # Bring in the translations from the previous chunk
+  left_join(topic_crosswalk, by = c("clean_raw_topic" = "Original c-TF-IDF String")) %>%
+  mutate(
+    # Fallback to the title-cased raw topic if it wasn't in our Top 15 translated list
+    Final_Label = ifelse(is.na(`LLM Dashboard Label`), str_to_title(clean_raw_topic), `LLM Dashboard Label`)
+  )
+# Focus on top departments and top topics to keep the grid readable
+top_depts  <- ai_df %>% count(department, sort = TRUE) %>% slice_head(n = 6) %>% pull(department)
+top_topics <- ai_df %>% count(Final_Label, sort = TRUE) %>% slice_head(n = 12) %>% pull(Final_Label)
+filtered_df <- ai_df %>%
+  filter(department %in% top_depts, Final_Label %in% top_topics)
+# Create a contingency table and run Chi-Square to get Standardized Residuals
+contingency_matrix <- table(filtered_df$Final_Label, filtered_df$department)
+chisq_res <- chisq.test(contingency_matrix)
+# Convert residuals back to a tidy dataframe for ggplot
+enrichment_data <- as.data.frame(chisq_res$stdres) %>%
+  rename(Topic = Var1, Department = Var2, StdResidual = Freq)
+# Visualize as an Enrichment Heatmap using the clean LLM labels
+ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  scale_fill_gradient2(
+    low = "#2b83ba", mid = "#ffffbf", high = "#d7191c",
+    midpoint = 0,
+    name = "Standardized\nResidual"
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Statistical Enrichment of AI Topics Across Departments",
+    subtitle = "Red indicates strong over-representation (residual > +2); Blue indicates under-representation.",
+    x = NULL,
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(size = 11, face = "bold")
+  )
+```
+
+## Section 7
+
+```{r}
+#| label: fig-seasonal-trends-global-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Citywide monthly inbound ticket demand versus the volume of resulting SLA breaches."
+
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(scales)
+
+# Base dataset with extracted month
+seasonal_base <- sla_delta_data %>%
+  mutate(created_month = month(open_dt, label = TRUE, abbr = TRUE))
+# Global Aggregation
+global_summary <- seasonal_base %>%
+  group_by(created_month) %>%
+  summarise(
+    Total_Demand = n(),
+    SLA_Breaches = sum(compliance_status == "Overdue (Late)", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Total_Demand, SLA_Breaches),
+    names_to = "Metric",
+    values_to = "Volume"
+  ) %>%
+  mutate(
+    Metric = factor(Metric, levels = c("Total_Demand", "SLA_Breaches"), 
+                    labels = c("Total Inbound Tickets (Demand)", "Missed SLAs (System Failure)"))
+  )
+# Build the global seasonal overlay
+ggplot(global_summary, aes(x = created_month, y = Volume, group = Metric, color = Metric)) +
+  geom_line(linewidth = 1.5) +
+  geom_point(size = 3) +
+  scale_y_continuous(labels = comma) +
+  scale_color_manual(values = c("Total Inbound Tickets (Demand)" = "#b3cde3", 
+                                "Missed SLAs (System Failure)" = "#e41a1c")) +
+  theme_minimal() +
+  labs(
+    title = "Citywide Seasonal Operational Stress Test",
+    subtitle = "Tracking when inbound municipal demand outpaces workforce resolution capacity.",
+    x = "Month Request Opened",
+    y = "Ticket Volume",
+    color = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "top",
+    axis.text.x = element_text(face = "bold")
+  )
+```
+
+```{r}
+#| label: fig-seasonal-trends-department-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 12
+#| fig-height: 8
+#| fig-cap: "Departmental breakdown of monthly demand versus SLA breaches. Department abbreviations: BTDT (Transportation), INFO (Mayor's Hotline), ISD (Inspectional Services), PARK (Parks & Recreation), PROP (Property Management), PWDx (Public Works)."
+
+# Find the top 6 departments by overall ticket volume 
+top_depts_season <- seasonal_base %>%
+  count(department, sort = TRUE) %>%
+  slice_head(n = 6) %>%
+  pull(department)
+# Departmental Aggregation
+dept_summary <- seasonal_base %>%
+  filter(department %in% top_depts_season) %>%
+  group_by(department, created_month) %>%
+  summarise(
+    Total_Demand = n(),
+    SLA_Breaches = sum(compliance_status == "Overdue (Late)", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Total_Demand, SLA_Breaches),
+    names_to = "Metric",
+    values_to = "Volume"
+  ) %>%
+  mutate(
+    Metric = factor(Metric, levels = c("Total_Demand", "SLA_Breaches"), 
+                    labels = c("Total Inbound Tickets (Demand)", "Missed SLAs (System Failure)"))
+  )
+# Build the faceted visualization
+ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = Metric)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  facet_wrap(~ department, scales = "free_y", ncol = 3) +
+  scale_y_continuous(labels = comma) +
+  scale_color_manual(values = c("Total Inbound Tickets (Demand)" = "#b3cde3", 
+                                "Missed SLAs (System Failure)" = "#e41a1c")) +
+  theme_minimal() +
+  labs(
+    title = "Seasonal Stress Test by Top Departments",
+    subtitle = "Comparing capacity thresholds across individual workflows (Note: Y-axes vary by department).",
+    x = "Month Request Opened",
+    y = "Ticket Volume",
+    color = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+## Section 8
+
+```{r}
+#| label: fig-survival-analysis-departments-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Kaplan-Meier survival curves estimating the probability a ticket remains open over time. Department abbreviations: BTDT (Transportation), INFO (Mayor's Hotline), ISD (Inspectional Services), PARK (Parks & Recreation), PROP (Property Management), PWDx (Public Works)."
+
+library(dplyr)
+library(ggplot2)
+library(survival)
+library(broom)
+library(stringr)
+library(scales)
+
+# Isolate the top 5 departments
+top_5_depts <- sla_delta_data %>%
+  count(department, sort = TRUE) %>%
+  slice_head(n = 5) %>%
+  pull(department)
+survival_df <- sla_delta_data %>%
+  filter(department %in% top_5_depts) %>%
+  mutate(
+    max_date = max(open_dt, na.rm = TRUE),
+    calc_end_dt = if_else(is.na(closed_dt), max_date, closed_dt),
+    duration_days = as.numeric(difftime(calc_end_dt, open_dt, units = "days")),
+    status_ind = if_else(is.na(closed_dt), 0, 1)
+  ) %>%
+  filter(duration_days >= 0)
+# Fit the Kaplan-Meier Model
+km_fit <- survfit(Surv(duration_days, status_ind) ~ department, data = survival_df)
+tidy_km <- tidy(km_fit) %>% mutate(clean_dept = str_remove(strata, "department="))
+# Visualize the Hazard Curves
+ggplot(tidy_km, aes(x = time, y = estimate, color = clean_dept)) +
+  geom_step(linewidth = 1.2, alpha = 0.8) +
+  coord_cartesian(xlim = c(0, 60)) + 
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Time-to-Resolution: Ticket Survival Analysis",
+    subtitle = "The mathematical probability that a 311 request remains unresolved as days pass.",
+    x = "Days Since Request Opened",
+    y = "Probability Ticket is Still Open",
+    color = "Department"
+  ) +
+  theme(plot.title = element_text(face = "bold", size = 14))
+```
+
+```{r}
+#| label: fig-cox-regression-model-adjusted-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+#| fig-cap: "Hazard Ratios (Log Scale) isolating the impact of reporting sources and departments. Automated API integrations (e.g., 'Maximo Integration' used by the Boston 311 system) have been removed to isolate human workforce efficiency."
+
+library(dplyr)
+library(survival)
+library(broom)
+library(ggplot2)
+library(forcats)
+library(stringr)
+
+# Prepare Data and Filter Automated Artifacts
+cox_df <- sla_delta_data %>%
+  filter(department %in% c("BTDT", "ISD", "INFO", "PARK", "PWDx")) %>%
+  mutate(
+    calc_end_dt = if_else(is.na(closed_dt), max(open_dt, na.rm = TRUE), closed_dt),
+    duration_days = as.numeric(difftime(calc_end_dt, open_dt, units = "days")),
+    status_ind = if_else(is.na(closed_dt), 0, 1),
+    source_clean = if_else(is.na(source), "Unknown", as.character(source))
+  ) %>%
+  # Remove the Maximo API artifact to measure actual human work
+  filter(duration_days > 0, !str_detect(source_clean, "Maximo"))
+# Fit the Adjusted Cox Model
+cox_model <- coxph(Surv(duration_days, status_ind) ~ department + source_clean, data = cox_df)
+# Tidy and Exponentiate
+tidy_cox <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term != "") %>%
+  mutate(
+    clean_term = str_remove_all(term, "department|source_clean"),
+    is_significant = if_else(p.value < 0.05, "Significant (p < .05)", "Not Significant"),
+    clean_term = fct_reorder(clean_term, estimate)
+  )
+# Build the Log-Scaled Forest Plot
+ggplot(tidy_cox, aes(x = estimate, y = clean_term, color = is_significant)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "black", linewidth = 1) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, linewidth = 1.2) +
+  # Apply base-10 log scale for mathematically accurate visual distances
+  scale_x_log10(breaks = c(0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5)) + 
+  scale_color_manual(values = c("Significant (p < .05)" = "#1b9e77", "Not Significant" = "#7570b3")) +
+  theme_minimal() +
+  labs(
+    title = "Multivariate Drivers of Ticket Resolution",
+    subtitle = "Variables to the right (HR > 1) accelerate resolution. Variables to the left (HR < 1) delay it.",
+    x = "Hazard Ratio (Log-Scaled Multiplier of Resolution Speed)",
+    y = "Operational Variable",
+    color = "Statistical Significance"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom",
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
+```
+
+## Section 9
+
+```{r}
+#| label: fig-queue-velocity-analysis-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 12
+#| fig-height: 8
+#| fig-cap: "Queueing Stability: Weekly net change in unresolved tickets (Arrivals minus Services).Department abbreviations: BTDT (Transportation), INFO (Mayor's Hotline), ISD (Inspectional Services), PARK (Parks & Recreation), PROP (Property Management), PWDx (Public Works)."
+
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+
+# Calculate the Arrival Rate (lambda) and Service Rate (mu) per week
+queue_dynamics <- sla_delta_data %>%
+  filter(department %in% c("BTDT", "ISD", "INFO", "PARK", "PWDx")) %>%
+  mutate(
+    open_week = floor_date(open_dt, "week"),
+    close_week = floor_date(closed_dt, "week")
+  )
+# Arrivals per week
+arrivals <- queue_dynamics %>%
+  group_by(department, week = open_week) %>%
+  summarise(tickets_opened = n(), .groups = "drop")
+# Services per week (ignoring NAs for open tickets)
+services <- queue_dynamics %>%
+  filter(!is.na(close_week)) %>%
+  group_by(department, week = close_week) %>%
+  summarise(tickets_closed = n(), .groups = "drop")
+# Merge and calculate Net Backlog Velocity
+backlog_velocity <- arrivals %>%
+  full_join(services, by = c("department", "week")) %>%
+  # Replace NAs with 0 for weeks where no tickets were opened or closed
+  replace_na(list(tickets_opened = 0, tickets_closed = 0)) %>%
+  mutate(
+    net_queue_change = tickets_opened - tickets_closed,
+    # Create a flag for color coding: Red = Growing queue, Blue = Shrinking queue
+    status = if_else(net_queue_change > 0, "Queue Growing (Instability)", "Queue Recovering (Stability)")
+  ) %>%
+  # Filter out extreme edge dates if necessary to keep the plot clean
+  filter(week >= min(arrivals$week, na.rm = TRUE) & week <= max(arrivals$week, na.rm = TRUE))
+# Visualize the System Stability
+ggplot(backlog_velocity, aes(x = week, y = net_queue_change, fill = status)) +
+  geom_col(alpha = 0.85) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 1) +
+  facet_wrap(~ department, scales = "free_y", ncol = 2) +
+  scale_fill_manual(values = c("Queue Growing (Instability)" = "#e41a1c", 
+                               "Queue Recovering (Stability)" = "#377eb8")) +
+  theme_minimal() +
+  labs(
+    title = "Departmental Queue Stability (Backlog Velocity)",
+    subtitle = "Tracking weekly thermodynamic balance: Tickets Opened vs. Tickets Closed.",
+    x = "Week",
+    y = "Net Change in Open Tickets",
+    fill = "System Status"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+## Section 10
+
+```{r}
+#| label: fig-spatial-equity-morans-i-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "Geospatial distribution of SLA breach rates across Boston census tracts."
+
+library(dplyr)
+library(sf)
+library(tigris)
+library(spdep)
+library(ggplot2)
+library(stringr)
+
+# Gets the Shapefile via API (Natively downloads Suffolk County Census Tracts)
+options(tigris_use_cache = TRUE)
+boston_tracts <- tracts(state = "MA", county = "Suffolk", cb = TRUE, year = 2022, progress_bar = FALSE) %>%
+  st_transform(crs = 4326)
+# Prepare the 311 Spatial Points
+spatial_311 <- sla_delta_data %>%
+  filter(!is.na(latitude), !is.na(longitude)) %>%
+  filter(!str_detect(if_else(is.na(source), "Unknown", as.character(source)), "Maximo")) %>%
+  mutate(is_breach = if_else(on_time == "ONTIME", 0, 1)) %>% 
+  # Convert flat data frame into an active spatial object
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+# Spatial Join: Assign tickets to Census Tracts and calculate breach rates
+tract_breaches <- boston_tracts %>%
+  st_join(spatial_311, left = FALSE) %>%
+  group_by(GEOID) %>%
+  summarise(
+    total_tickets = n(),
+    breach_rate = mean(is_breach, na.rm = TRUE)
+  ) %>%
+  # Filter out tracts with highly volatile low sample sizes (e.g., airport, harbor islands)
+  filter(total_tickets > 50)
+# Calculate Global Moran's I for Spatial Autocorrelation
+# Create the spatial weights matrix (defining which tracts touch each other)
+neighbors <- poly2nb(tract_breaches, queen = TRUE)
+weights <- nb2listw(neighbors, style = "W", zero.policy = TRUE)
+# Execute the mathematical test
+moran_result <- moran.test(tract_breaches$breach_rate, weights, zero.policy = TRUE)
+# Visualization
+ggplot(tract_breaches) +
+  geom_sf(aes(fill = breach_rate), color = "white", size = 0.1) +
+  scale_fill_viridis_c(option = "magma", labels = scales::percent_format()) +
+  theme_void() +
+  labs(
+    title = "Spatial Equity of Municipal Services",
+    subtitle = paste0("Global Moran's I: ", round(moran_result$estimate[1], 3), 
+                      " (p-value: ", signif(moran_result$p.value, 3), ")"),
+    fill = "SLA Breach Rate",
+    caption = "Excludes automated Maximo Integration closures to isolate human workforce equity."
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "right"
+  )
+```
+
+```{r}
+#| label: fig-spatial-equity-lisa-A
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "LISA Cluster Map isolating statistically significant zones of systemic neglect (High-High) and exceptional service (Low-Low)."
+# Calculate Local Moran's I
+local_m <- localmoran(tract_breaches$breach_rate, weights, zero.policy = TRUE)
+# Scale the variables to determine the quadrants (centered on the mean)
+c_breach <- tract_breaches$breach_rate - mean(tract_breaches$breach_rate, na.rm = TRUE)
+c_lag <- lag.listw(weights, c_breach, zero.policy = TRUE)
+# Categorize the tracts into LISA clusters
+lisa_tracts <- tract_breaches %>%
+  mutate(
+    # Extract the p-value from the local moran matrix (Column 5)
+    p_val = local_m[, 5], 
+    # Define the raw spatial quadrants
+    quadrant = case_when(
+      c_breach > 0 & c_lag > 0 ~ "High-High (Systemic Neglect)",
+      c_breach < 0 & c_lag < 0 ~ "Low-Low (Exceptional Service)",
+      c_breach > 0 & c_lag < 0 ~ "High-Low (Spatial Outlier)",
+      c_breach < 0 & c_lag > 0 ~ "Low-High (Spatial Outlier)",
+      TRUE ~ "Not Significant"
+    ),
+    # Mask the quadrants by statistical significance (p < 0.05)
+    lisa_cluster = if_else(p_val <= 0.05, quadrant, "Not Significant")
+  ) %>%
+  # Convert the cluster to a factor for ordered plotting
+  mutate(lisa_cluster = factor(lisa_cluster, levels = c(
+    "High-High (Systemic Neglect)", 
+    "Low-Low (Exceptional Service)", 
+    "High-Low (Spatial Outlier)", 
+    "Low-High (Spatial Outlier)", 
+    "Not Significant"
+  )))
+# Map the LISA Clusters
+# Define a stark, color-blind friendly palette to highlight the inequity
+lisa_colors <- c(
+  "High-High (Systemic Neglect)" = "#d73027",    # Red
+  "Low-Low (Exceptional Service)" = "#4575b4",   # Blue
+  "High-Low (Spatial Outlier)" = "#fdae61",      # Light Orange
+  "Low-High (Spatial Outlier)" = "#abd9e9",      # Light Blue
+  "Not Significant" = "#f0f0f0"                  # Light Grey
+)
+ggplot(lisa_tracts) +
+  geom_sf(aes(fill = lisa_cluster), color = "darkgrey", size = 0.1) +
+  scale_fill_manual(values = lisa_colors, drop = FALSE) +
+  theme_void() +
+  labs(
+    title = "Zones of Systemic Neglect vs. Exceptional Service",
+    subtitle = "Statistically significant spatial clusters of 311 SLA breaches (Local Moran's I, p < 0.05).",
+    fill = "LISA Classification",
+    caption = "Excludes automated 'maximo integration' closures to isolate human workforce equity."
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "right",
+    legend.title = element_text(face = "bold")
+  )
+```
+
