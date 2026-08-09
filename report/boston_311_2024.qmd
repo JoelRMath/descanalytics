@@ -40,17 +40,9 @@ library(tidyr)
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 ```
 
-# 1. Introduction: Applied Analytics for Maintenance Operations
+# 1. Goals & Executive Summary: Applied Analytics for Maintenance Operations
 
-Managing large-scale property portfolios—spanning hundreds of buildings and thousands of service requests—requires more than basic descriptive dashboards. Reporting metrics like average completion times or SLA (Service Level Agreement) compliance rates frequently mask bottlenecks. They obscure capital constraints, disguise inefficient resource allocation, and fail to measure true workforce capacity.
-
-Optimizing maintenance operations at scale requires advanced Data Science (DS) and Operations Research (OR) methodologies. Extracting actionable intelligence from service databases is an iterative process relying on three core ingredients:
-
-**Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
-
-**Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth requires an exploratory analytical process that generalized software cannot fully automate.
-
-**Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
+This report demonstrates the value of applying advanced Data Science (DS) and Operations Research (OR) methodologies to extract actionable operational intelligence from databases of service requests. Managing large-scale property portfolios—spanning hundreds of buildings and thousands of service requests—requires more than basic descriptive dashboards. Reporting metrics like average completion times or SLA (Service Level Agreement) compliance rates frequently mask bottlenecks. They obscure capital constraints, disguise inefficient resource allocation, and fail to measure true workforce capacity.
 
 ## The Example Dataset (Boston 311)
 
@@ -60,10 +52,55 @@ Boston’s geographic districts and digital queues serve as a practical analog f
 
 ## Key findings
 
+By applying Data Science and Operations Research methods to the 2024 dataset (242,033 closed records and 40,802 open records), we isolated key operational drivers of municipal service. Standard reporting metrics frequently fail in maintenance environments; this analysis relies on robust, non-parametric statistics and machine learning to correct those flaws and uncover the following structural insights:
 
-# 2. Data Validation and Formatting
+**Exogenous Shocks & Cumulative Backlogs**: Visualizing unresolved tickets revealed backlog peaks at 60 and 170 days (@fig-open-tickets-distribution). Because visual peaks can be artifacts of data binning, we mathematically confirmed their existence using the robust non-parametric Hartigan’s Dip Test, yielding an effect size and p-value that definitively ruled out random chance (@fig-robust-binning). Cross-referencing these spikes by department proved they were not general trends, but related to collapses of the Transportation Department's queue (@fig-open-tickets-by-month). These surges align with known severe infrastructure shocks in 2024: the Sumner Tunnel Restoration Project (June) and the Orange Line shutdown (October). 
 
-Data validation is the foundation of rigorous analysis. Before formatting operational features, we programmatically audit the raw dataset to map column types, quantify unique values, and identify missing records (NAs). This prevents silent failures in downstream mathematical models.
+**The Right-Skew Flaw & Organizational Routing**: The Right-Skew Flaw & Organizational Routing: Service completion times are severely right-skewed and fail to fit a normal distribution even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times artificially inflates performance metrics. Using robust non-parametric testing (volume-weighted KS test) to analyze SLA closures (@fig-sla-delta-distribution), we proved that resolution compliance is predominantly dictated by organizational routing—the digital queue assignments and task categorizations (e.g., queue, type, department)—rather than standard geographical constraints (e.g., zipcode, ward, district) (@tbl-factor-ranking, @fig-queue-histogram).
+
+**AI-Driven Text Analytics**: The dataset contains a massive volume of unstructured free text (closure_reason). We deployed an unsupervised AI clustering pipeline to programmatically extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into executive-ready categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are heavily enriched within specific departments (@fig-topic-factor-enrichment). However, we noted the limits of this approach: attempting to use free-text clustering to explain granular seasonal demand surges (@fig-seasonal-trends-global, @fig-seasonal-trends-department) resulted in a degraded signal, necessitating mathematical queueing analysis instead.
+
+**True Workforce Velocity (Survival Analysis)**: Standard averages suffer from survivorship bias by ignoring open tickets. Kaplan-Meier survival curves  (@fig-survival-analysis-departments) reveal how departments actually process their queues:
+
+- **Public Works (PWDx)**: Optimized for rapid triage, clearing 80–85% of tickets in 48–72 hours.
+- **Baseline (BTDT, INFO, ISD)**: Clear 75% of tickets in a week, followed by a steady, predictable burn-down rate.
+- **Parks & Recreation (PARK)**: Exhibits a structural bottleneck. The curve flatlines, with roughly 20% of tickets effectively abandoned past the 60-day mark.
+
+To complement survival analysis and identify key resolution factors, we utilized Cox Proportional Hazards modeling. (@fig-cox-regression-model-adjusted) shows that PWDx operates at nearly double the baseline speed, while PARK faces a 35% speed deficit. Furthermore, manual intake (constituent phone calls) introduces heavy administrative friction, slowing resolution pipelines by roughly 22%.
+
+**Queueing Dynamics & Budget Cycles**: Queueing analysis is different than survival analysis because it is based on resolution rates: it measures system responsiveness (@fig-queue-velocity-analysis). PWDx and INFO run highly reactive models with zero structural slack, absorbing immediate shocks and resetting quickly. Conversely, PARK operates in continuous structural instability for the first six months of the year, lacking baseline daily capacity. Their massive queue correction aligns perfectly with the July 1st start of the municipal Fiscal Year, strongly suggesting a structural reliance on a seasonal budget or workforce unlock. Additionally, a sudden 1,500-ticket closure event in Transportation (BTDT) points to a database batch-closure artifact rather than human operational velocity.
+
+**Isolating Zones of Systemic Neglect**: A common statistical fallacy is assuming geographic equity exists just because flat geographical categories (like zip codes or wards) yield small effect sizes compared to organizational drivers. Categorical bins inherently destroy physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the LISA analysis mathematically maps structural inequality (@fig-spatial-equity-lisa). It identifies three distinct "High-High" clusters of systemic neglect that are geographically severed from the city's central core: Allston-Brighton (Western), East Boston (Northeast), and Charlestown (Northern). Exceptionally prompt service ("Low-Low") is heavily clustered in the downtown municipal core.
+
+## Potential Transferability to Property Management
+
+While this report leverages a municipal dataset, the mathematical framework is partly transferable to large-scale property maintenance. Decentralized real estate portfolios face similar structural challenges regarding resource allocation, physical dependencies, and workforce capacity. For example:
+
+**Queueing Theory & Labor Scaling**: Comparing the queue velocity of different geographic property subsets allows directors to identify if specific on-site maintenance teams are structurally overwhelmed, ensuring labor is scaled to match actual inbound tenant demand rather than arbitrary building counts.
+
+**Survival Analysis & Regulatory Readiness**: Probabilistic modeling via Kaplan-Meier and Cox Hazards can track the resolution of complex capital repairs versus routine maintenance, ensuring critical safety issues are resolved well before they trigger regulatory scoring deductions (such as inspection breaches).
+
+**Spatial Autocorrelation for Logistical Friction**: Just as municipal infrastructure creates chokepoints, travel time between scattered-site properties introduces massive logistical friction. Spatial analysis mathematically isolates which buildings suffer from delayed service simply due to their geographic isolation from central storage hubs.
+
+**AI Text Analytics for Asset Lifecycles**: Unsupervised clustering of unstructured tenant work orders can map hidden operational task dependencies, flag behavioral-driven organizational bottlenecks, and preemptively identify systemic asset failures across a portfolio.
+
+Ultimately, applying Data Science—specifically the descriptive and diagnostic analytics branches of Operations Research—to service request databases extracts profound operational intelligence, moving beyond basic dashboards to reveal true workforce capacity and structural bottlenecks.
+
+However, extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires an iterative, analytical detective work that relies on three core methodological pillars:
+
+**Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
+
+**Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth requires an exploratory analytical process that generalized software cannot fully automate.
+
+**Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
+
+This statistically rigorous and advanced detective work is detailed in the next section.
+
+# 2 Analytical Detective Work: Detailed Findings and Methodology.
+
+## 2.1 Data Validation and Cohort Partitioning
+
+Data validation is the foundation of rigorous analysis. Before performing any analysis, we first implement an audit script to map column types, quantify unique values, and identify missing records (NAs). This exploratory step prevents silent failures in downstream mathematical models and generates the interactive data dictionary below.
 
 ```{r}
 #| label: tbl-data-dictionary
@@ -97,13 +134,13 @@ datatable(
 )
 ```
 
-Following the audit, we partition the raw data into two subsets to isolate different operational dynamics:
+Following the initial audit, the work begins by partitioning the raw data into two distinct operational cohorts. This separation is necessary because open and closed tickets tell fundamentally different stories:
 
-**Backlog Cohort (Open Requests)**: Work orders unresolved at the end of the observation period. This subset is critical for diagnosing structural blockages and system capacity.
+**Backlog Cohort (Open Requests)**: Work orders unresolved at the end of the observation period. This subset acts as a diagnostic snapshot, allowing us to evaluate system capacity and structural blockages at a fixed point in time.
 
-**Resolved Cohort (Closed Requests)**: Work orders with a complete lifecycle. This primary dataset evaluates workforce speed and SLA compliance.
+**Resolved Cohort (Closed Requests)**: Work orders with a complete lifecycle. This primary dataset is utilized to evaluate historical workforce speed, logistical friction, and SLA (Service Level Agreement) compliance.
 
-The pipeline below isolates the resolved cohort, purges data entry anomalies (e.g., negative resolution times), and generates new temporal features for subsequent seasonality and scheduling analysis.
+Because raw datasets inherently contain administrative noise, we apply a filtering pipeline to the Resolved Cohort. The validation scripts calculates the resolution time (in days) for every closed ticket, isolate temporal features (month, weekday, and hour of intake) for future seasonality analysis, and purge physical impossibilities—such as negative resolution times caused by clerical data-entry errors.
 
 ```{r}
 #| label: data-cleaning
@@ -113,8 +150,9 @@ The pipeline below isolates the resolved cohort, purges data entry anomalies (e.
 
 # Ingestion
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
-# Cleaning and Feature Engineering for the Resolved Cohort
-boston_clean <- boston_311 %>%
+
+# Step 1: Base Filtering and Feature Engineering
+boston_mutated <- boston_311 %>%
   # Filter for completed work orders
   filter(case_status == "Closed", !is.na(closed_dt), !is.na(open_dt)) %>%
   mutate(
@@ -124,15 +162,22 @@ boston_clean <- boston_311 %>%
     open_month = month(open_dt, label = TRUE, abbr = TRUE),
     open_wday = wday(open_dt, label = TRUE, abbr = TRUE, week_start = 1), # Monday = 1
     open_hour = hour(open_dt)
-  ) %>%
-  # Remove data entry errors (negative resolution times)
+  )
+
+# Step 2: Quantify the data entry errors
+negative_records_count <- sum(boston_mutated$resolution_days < 0, na.rm = TRUE)
+
+# Step 3: Purge errors and finalize the Resolved Cohort
+boston_clean <- boston_mutated %>%
   filter(resolution_days >= 0)
+
 write_csv(boston_clean, here("data", "boston_clean.csv"))
-# Sort output
+
+# Output the validation summary
+cat("Purged", format(negative_records_count, big.mark = ","), "records with negative resolution times (data entry errors).\n")
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
-
-Before evaluating historical performance with the resolved cohort, we will first analyze the backlog cohort to diagnose the the system status at the end of 2024.
+Before examining the historical speed of the Resolved Cohort, we first interrogate the Backlog Cohort to diagnose the state of the municipal queue at the close of 2024.
 
 # 3. Open Requests at the End of 2024
 
@@ -556,7 +601,7 @@ total_n <- nrow(sla_delta_data)
 factors_to_test <- c("subject", "reason", "type", "queue", "department", 
                      "fire_district", "pwd_district", "city_council_district", 
                      "police_district", "neighborhood", "neighborhood_services_district", 
-                     "ward", "precinct", "location_zipcode")
+                     "ward", "precinct", "location_zipcode", "source")
 # Function to calculate the Weighted K-S Distance and extract p-values
 calc_weighted_ks <- function(factor_name, data, global_dist, total_n) {
   data %>%
@@ -611,7 +656,9 @@ kable(
 
 **Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
 
-**WARNING: The Geographic Equity Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common **statistical mistake** is interpreting this low ranking as proof of the null hypothesis—falsely concluding that because geographic features do not explain the variance, geographic equity exists. The only correct statement for a large p-value is: "The test failed to reject the null hypothesis". Failure to reject is not equivalent to proving that the null hypothesis is true. Failing to reject the null hypothesis here only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
+**WARNING: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the $p$-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.
+
+Ranking at the bottom only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
 
 ### 5.2.3 Result Illustration with Histograms
 
@@ -625,7 +672,7 @@ By coloring the overall SLA Delta histogram by the top digital queues, we visual
 #| warning: false
 #| fig-width: 9
 #| fig-height: 7
-#| fig-cap: "SLA Delta Histogram"
+#| fig-cap: "SLA Delta Histogram for the top four values of factor 'queue'"
 
 # Isolate the top 4 queues to compare against the global background
 top_queues <- sla_delta_data %>%
@@ -804,6 +851,50 @@ topic_crosswalk <- tibble(
   `LLM Dashboard Label` = llm_clean_names
 )
 kable(topic_crosswalk, caption = "Automated Topic Translation via Local Llama 3 (Offline API)")
+```
+
+With the raw statistical keywords successfully translated into intuitive operational categories, we can now reconstruct the visualization to provide a clearer view of system delays.
+
+```{r}
+#| label: fig-plot-bertopic-results-after-ollama
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+#| fig-cap: "Volume of SLA breaches categorized by human-readable operational themes."
+
+# Re-isolate the delayed tickets and format the topic strings to match the crosswalk
+ai_plot_data_translated <- sla_delta_data %>%
+  inner_join(ai_results, by = "case_enquiry_id") %>%
+  filter(compliance_status == "Overdue (Late)", topic_id != -1) %>%
+  mutate(
+    clean_raw_topic = str_remove(ai_topic_name, "^\\d+_"),
+    clean_raw_topic = str_replace_all(clean_raw_topic, "_", " ")
+  ) %>%
+  count(clean_raw_topic, sort = TRUE) %>%
+  slice_head(n = 15) %>%
+  # Join the translated labels generated by Ollama
+  left_join(topic_crosswalk, by = c("clean_raw_topic" = "Original c-TF-IDF String")) %>%
+  # Fallback to Title Case just in case a delayed topic wasn't in the global Top 15
+  mutate(
+    final_label = ifelse(is.na(`LLM Dashboard Label`), str_to_title(clean_raw_topic), `LLM Dashboard Label`)
+  )
+
+# Generate the updated visualization
+ggplot(ai_plot_data_translated, aes(x = n, y = reorder(final_label, n))) +
+  geom_col(fill = "steelblue", color = "white", alpha = 0.9) +
+  theme_minimal() +
+  labs(
+    title = "Top Causes of Operational Delays (Translated via AI)",
+    subtitle = "Unsupervised clustering of closure notes, categorized by local Llama 3.",
+    x = "Volume of Delayed Work Orders",
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 11, face = "bold")
+  )
 ```
 
 ## 6.4 Departmental Topic Enrichment

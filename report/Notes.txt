@@ -7,12 +7,90 @@
 and it is first confirmed by changing binning (@fig-robust-binning). To completely confirm 
 the existence of the two peaks a robust nonparametric test (Hartigan's Dip Test) is utilized
 and yields an effect size of 0.02 and a p-value indistiguishible from 0.
-2.2 The origin of the two peaks is then resolved by cross-referencing open requests and department.
+2.2 The origin of the two peaks is then resolved by cross-referencing open requests and departments.
 The transportation department shows a surge of unclosed requests starting in June (170 days) followed
 by a second one in Ocotber (60 days)(@@fig-open-tickets-by-month). These two surges correspond 
 respectively to the beginning of the Sumner Tunnel Restoration Project and the temporary closure 
 of the MBTA orange line.
 3. Resolution time. The distribution of resolution times (closing - opening) is very skewed to 
 the right, implying that the median resolution time is a better descriptor than the average. 
-Moreover, even after log transformation, resolution times do not fit any normal distribution, 
-implying that standard statistical approac 
+Moreover, even after log transformation, resolution times do not fit a normal distribution 
+(@fig-resolution-density-log) implying that standard statistical approaches are inappropriate. 
+Instead, robust nonparametric approaches are needed.
+4. SLA compliance analytics. Focusing on closed requests for which there was a 
+Service Level Agreement deadline, distribution shown in fig-sla-delta-distribution. 
+4.1 Many requests are closed right before the deadline and a smaller set is lagging
+(@fig-sla-delta-distribution).
+4.2 To identify factors that determine early or late compliance, we use a robust nonparametric 
+test (volume-weighted KS test). Results show that the main factors determining compliance are 
+related to organizational routing ('type', 'reason', 'subject', 'department') (@tbl-factor-ranking).
+While other factors yield smaller effect sizes, all have small p-values (likely related to the 
+large sample size). So, it would be a statistical fallacy here to reject the presence of 
+geographical inequalities, in particular because the utilized test is not designed to handle 
+the concept of geographic proximity. Disparity of compliance for factor queue is illustrated 
+with @fig-queue-histogram.
+5. In this dataset, column 'closure_reason' contains a huge amount of free text (unstructured) 
+[might be good to quantify this amount]. 
+We show that it is possible to provide a global view of this content by utilizing unsupervised 
+AI Clustering. Namely, we extract keywords that explain large clusters of non-complying tickets.
+(@fig-plot-bertopic-results).
+Because these keywords are programmatically extracted they are difficult to interpret. 
+Therefore we utilize a locally contained LLM to annotate these keywords with more 
+human-readable phrases. [maybe explain that better with the prompt we use for ollama] (@tbl-llm-topic-translation).
+[One thing missing in the report is a now-human-readable version of @fig-plot-bertopic-results, 
+that is after replacing labels with their translations]
+Lastly for AI Clusters, we examine how the tickets they represent overlap with departments 
+(@fig-topic-factor-enrichment)
+[NOTE: we use a Chi-Square test here, let's also check that its required assumptions are met,
+if not we can think of an alternative].
+6. Just looking at ticket volume and SLA failures during the year (@fig-seasonal-trends-global) shows that different 
+departments have very different seasonal trends (@fig-seasonal-trends-department). For instance, 
+Park & Recreation is mostly busy during the summer as one would expect [I think only this one 
+is safe to hypothesize without statistical validation]. Attempts to explain seasonal trends of 
+each department by AI Clustering of the 'closure_reason' text of tickets were not successful, 
+illustrating the limit of resolution that free text can provide.
+7. Average resolution times suffer from a severe statistical flaw: survivorship bias; 
+meaning that only closed tickets are included. To capture true operational reliability, 
+and study it by department, we use Survival Analysis. First the Kaplan-Meier estimator 
+(often used in clinical data analysis) is utilized. For each department this yields 
+the probability that a ticket is still open as a function of the number of days since its 
+creation (@fig-survival-analysis-departments). [Then abrreviate the current conclusions:
+The Kaplan-Meier estimation reveals stark differences in how municipal departments process their queues, highlighting both highly reactive workforces and structural bottlenecks:
+
+**Public Works (PWDx)**: The orange curve plummets almost instantly, indicating that roughly 80% to 85% of their tickets are resolved within the first 48 to 72 hours. This mathematically depicts a workforce optimized for rapid, high-volume triage (e.g., immediate pothole patching, trash pickup).
+
+**Baseline Cluster (BTDT, INFO, ISD)**: Transportation, the Mayor's Hotline, and Inspectional Services track closely together. They successfully clear about 75% of their open tickets within the first week. After that initial drop, they demonstrate a steady, predictable burn-down rate for more complex cases, approaching a near-zero unresolved rate by the 60-day mark.
+
+**Parks and Recreation (PARK)**: The purple curve is the critical anomaly. While PARK resolves about half of its tickets in the first few days, the curve abruptly flattens into a concrete floor. By day 20, nearly 30% of their tickets remain open, and approximately 20% are essentially abandoned past the 60-day mark. This mathematical "long-tail" confirms that PARK does not suffer from a simple speed issue, but rather a structural inability to clear complex tickets, heavily implying capital budget constraints or a reliance on seasonal workforce unlocks.]
+[After this we need a simple verbal explanation of why going with Cox Hazard beyond KS, what it gives, i.e. 
+a simple way to read (@fig-cox-regression-model-adjusted)].
+This means also stating the current detailed conclusions, not sure they can be shortened much:
+[* **Public Works (PWDx)** operates at nearly double the baseline speed, validating its rapid triage design
+* **Parks (PARK)** faces a 35% speed deficit from long-tail bottlenecks. 
+* **INFO**: manual intake channels like phone calls introduce administrative friction, slowing resolution pipelines by roughly 22% compared to digitally precise reporting.]
+8. Then the Queueing theory is introduced: it is a different approach than survival analysis: it 
+is based on rates (monthly?) of resolution. It measures the responsiveness (slow, fast) of each department
+(@fig-queue-velocity-analysis). Then we need to provide a shorter version of the current conclusions
+[**PARK**: For the first six months of the year, the Parks Department operates in an unbroken state of structural instability. The continuous red growth confirms they lack the baseline daily capacity to match inbound requests. The massive blue correction in July aligns perfectly with the July 1st start of the Boston municipal Fiscal Year. This strongly suggests a seasonal budget unlock, potentially allowing the department to finally deploy the capital or short-term seasonal workforce required to crush the six-month backlog.
+
+**BTDT**: Transportation displays a massive, singular correction of over 1,500 closed tickets in late summer. Because human workforces do not organically resolve 1,500 complex street-level issues in a single week, this mathematical signature strongly suggests an artifact of database batch-closure. It might represent a forced administrative reset to clear a runaway queue rather than natural operational velocity.
+
+**PWDx & INFO**: Public Works and the Mayor's Hotline constantly oscillate between small delays and immediate recoveries, closely hugging the baseline. This suggests highly reactive, well-managed workforces operating with zero structural slack. They seem to absorb immediate shocks (such as the January weather surge for PWDx) and immediately deploy surge capacity the following week to reset to zero.
+
+**ISD**: Inspectional Services demonstrates a steady accumulation of backlog through the spring months, directly aligning with the seasonal surge in construction and housing permits. Sustained recovery does not begin until mid-summer, indicating a persistent, multi-month lag between peak citizen demand and peak service delivery.
+]
+9. A short summary of the results (little methodology except to stress the distinction between the two 
+figures) with @fig-spatial-equity-morans-i and then @fig-spatial-equity-lisa. 
+We then provide a slightly shorter version of the current conclusions:
+[@fig-spatial-equity-lisa reveals the precise neighborhood boundaries of systemic operational failures, moving beyond simple density to mathematically isolate zones of structural inequality.
+
+The LISA analysis identifies three distinct "High-High" clusters of systemic neglect (highlighted in red) that are geographically separated from the city's central core:
+
+**Western Cluster (Allston-Brighton)**: The largest contiguous zone of delayed service dominates the far western edge of the city.
+
+**Northeast Cluster (East Boston)**: A secondary significant zone of systemic delay encompasses the northeast peninsula, bounded by Boston Harbor.
+
+**Northern Cluster (Charlestown)**: A third, smaller pocket of concentrated SLA breaches is situated on the northern peninsula across the Charles River.
+
+Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicating localized clusters of exceptionally prompt service delivery—are positioned centrally, situated within and immediately adjacent to the downtown municipal core. This spatial reality demonstrates that while service delays are not randomly distributed, they form distinct, localized geographic pockets that merit targeted operational review.]
+
