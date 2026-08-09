@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Joël R. Pradines, Ph.D.">
-<meta name="dcterms.date" content="2026-07-26">
+<meta name="dcterms.date" content="2026-08-08">
 
 <title>Data Analytics for Boston 311, year 2024</title>
 <style>
@@ -4873,6 +4873,7 @@ window.Quarto = {
   <li><a href="#introduction-applied-analytics-for-maintenance-operations" id="toc-introduction-applied-analytics-for-maintenance-operations" class="nav-link active" data-scroll-target="#introduction-applied-analytics-for-maintenance-operations">1. Introduction: Applied Analytics for Maintenance Operations</a>
   <ul class="collapse">
   <li><a href="#the-example-dataset-boston-311" id="toc-the-example-dataset-boston-311" class="nav-link" data-scroll-target="#the-example-dataset-boston-311">The Example Dataset (Boston 311)</a></li>
+  <li><a href="#key-findings" id="toc-key-findings" class="nav-link" data-scroll-target="#key-findings">Key findings</a></li>
   </ul></li>
   <li><a href="#data-validation-and-formatting" id="toc-data-validation-and-formatting" class="nav-link" data-scroll-target="#data-validation-and-formatting">2. Data Validation and Formatting</a></li>
   <li><a href="#open-requests-at-the-end-of-2024" id="toc-open-requests-at-the-end-of-2024" class="nav-link" data-scroll-target="#open-requests-at-the-end-of-2024">3. Open Requests at the End of 2024</a></li>
@@ -4950,7 +4951,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 26, 2026</p>
+      <p class="date">August 8, 2026</p>
     </div>
   </div>
   
@@ -4974,6 +4975,9 @@ window.Quarto = {
 <p>To demonstrate the application and value of these methodologies, this report utilizes the publicly available Boston 311 (Year 2024) dataset as an applied proxy.</p>
 <p>Boston’s geographic districts and digital queues serve as a practical analog for decentralized property management. Just as a real estate portfolio is divided into building subsets managed by local teams, the city’s workload is distributed across distinct neighborhoods. By treating constituent requests as tenant service orders, this document provides a demonstrative case study. While every new dataset is unique and requires its own custom detective work, this report illustrates how applying advanced analytics uncovers local bottlenecks, evaluates geographic equity, and models workforce dynamics.</p>
 </section>
+<section id="key-findings" class="level2">
+<h2 class="anchored" data-anchor-id="key-findings">Key findings</h2>
+</section>
 </section>
 <section id="data-validation-and-formatting" class="level1">
 <h1>2. Data Validation and Formatting</h1>
@@ -4989,8 +4993,8 @@ Table 1: Dataset Overview: Column types, unique values, and missing data.
 </figcaption>
 <div aria-describedby="tbl-data-dictionary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-3583e68730b9e401cf3d" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-3583e68730b9e401cf3d">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-1931ddc45b15db7ecd80" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-1931ddc45b15db7ecd80">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </figure>

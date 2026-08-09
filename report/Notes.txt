@@ -1,0 +1,18 @@
+## Key findings
+
+1 After data cleaning and formatting: 242,033 closed records and 40,802 open records
+2 Inspection of the service requests still open at the end of 2024
+2.1 Visual inspection of the ticket age distribution suggests peaks at 60 and 170 days 
+(@fig-open-tickets-distribution). Because it is a visual observation it could be an artefact of data binning 
+and it is first confirmed by changing binning (@fig-robust-binning). To completely confirm 
+the existence of the two peaks a robust nonparametric test (Hartigan's Dip Test) is utilized
+and yields an effect size of 0.02 and a p-value indistiguishible from 0.
+2.2 The origin of the two peaks is then resolved by cross-referencing open requests and department.
+The transportation department shows a surge of unclosed requests starting in June (170 days) followed
+by a second one in Ocotber (60 days)(@@fig-open-tickets-by-month). These two surges correspond 
+respectively to the beginning of the Sumner Tunnel Restoration Project and the temporary closure 
+of the MBTA orange line.
+3. Resolution time. The distribution of resolution times (closing - opening) is very skewed to 
+the right, implying that the median resolution time is a better descriptor than the average. 
+Moreover, even after log transformation, resolution times do not fit any normal distribution, 
+implying that standard statistical approac 

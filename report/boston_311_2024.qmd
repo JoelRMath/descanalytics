@@ -58,6 +58,9 @@ To demonstrate the application and value of these methodologies, this report uti
 
 Boston’s geographic districts and digital queues serve as a practical analog for decentralized property management. Just as a real estate portfolio is divided into building subsets managed by local teams, the city's workload is distributed across distinct neighborhoods. By treating constituent requests as tenant service orders, this document provides a demonstrative case study. While every new dataset is unique and requires its own custom detective work, this report illustrates how applying advanced analytics uncovers local bottlenecks, evaluates geographic equity, and models workforce dynamics.
 
+## Key findings
+
+
 # 2. Data Validation and Formatting
 
 Data validation is the foundation of rigorous analysis. Before formatting operational features, we programmatically audit the raw dataset to map column types, quantify unique values, and identify missing records (NAs). This prevents silent failures in downstream mathematical models.
