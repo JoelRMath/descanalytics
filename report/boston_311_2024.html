@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Joël R. Pradines, Ph.D.">
-<meta name="dcterms.date" content="2026-08-09">
+<meta name="dcterms.date" content="2026-08-10">
 
 <title>Data Analytics for Boston 311, year 2024</title>
 <style>
@@ -4879,17 +4879,12 @@ window.Quarto = {
   <li><a href="#analytical-detective-work-detailed-findings-and-methodology." id="toc-analytical-detective-work-detailed-findings-and-methodology." class="nav-link" data-scroll-target="#analytical-detective-work-detailed-findings-and-methodology.">2 Analytical Detective Work: Detailed Findings and Methodology.</a>
   <ul class="collapse">
   <li><a href="#data-validation-and-cohort-partitioning" id="toc-data-validation-and-cohort-partitioning" class="nav-link" data-scroll-target="#data-validation-and-cohort-partitioning">2.1 Data Validation and Cohort Partitioning</a></li>
-  </ul></li>
-  <li><a href="#open-requests-at-the-end-of-2024" id="toc-open-requests-at-the-end-of-2024" class="nav-link" data-scroll-target="#open-requests-at-the-end-of-2024">3. Open Requests at the End of 2024</a></li>
-  <li><a href="#resolution-time" id="toc-resolution-time" class="nav-link" data-scroll-target="#resolution-time">4. Resolution Time</a></li>
-  <li><a href="#sla-compliance-analytics" id="toc-sla-compliance-analytics" class="nav-link" data-scroll-target="#sla-compliance-analytics">5. SLA Compliance Analytics</a>
+  <li><a href="#backlog-diagnostics-identifying-exogenous-shocks" id="toc-backlog-diagnostics-identifying-exogenous-shocks" class="nav-link" data-scroll-target="#backlog-diagnostics-identifying-exogenous-shocks">Backlog Diagnostics: Identifying Exogenous Shocks</a></li>
+  <li><a href="#the-right-skew-flaw-defining-true-resolution-time" id="toc-the-right-skew-flaw-defining-true-resolution-time" class="nav-link" data-scroll-target="#the-right-skew-flaw-defining-true-resolution-time">2.3. The Right-Skew Flaw: Defining True Resolution Time</a></li>
+  <li><a href="#isolating-the-causes-of-delay" id="toc-isolating-the-causes-of-delay" class="nav-link" data-scroll-target="#isolating-the-causes-of-delay">2.4 Isolating the Causes of Delay</a>
   <ul class="collapse">
-  <li><a href="#the-sla-delta-distribution-latenessearliness" id="toc-the-sla-delta-distribution-latenessearliness" class="nav-link" data-scroll-target="#the-sla-delta-distribution-latenessearliness">5.1 The SLA Delta Distribution (Lateness/Earliness)</a></li>
-  <li><a href="#factors-driving-variance-in-sla-compliance" id="toc-factors-driving-variance-in-sla-compliance" class="nav-link" data-scroll-target="#factors-driving-variance-in-sla-compliance">5.2 Factors Driving Variance in SLA Compliance</a>
-  <ul class="collapse">
-  <li><a href="#the-mathematical-approach-volume-weighted-k-s-distance" id="toc-the-mathematical-approach-volume-weighted-k-s-distance" class="nav-link" data-scroll-target="#the-mathematical-approach-volume-weighted-k-s-distance">5.2.1 The Mathematical Approach: Volume-Weighted K-S Distance</a></li>
-  <li><a href="#results-the-dominance-of-organizational-routing" id="toc-results-the-dominance-of-organizational-routing" class="nav-link" data-scroll-target="#results-the-dominance-of-organizational-routing">5.2.2 Results: The Dominance of Organizational Routing</a></li>
-  <li><a href="#result-illustration-with-histograms" id="toc-result-illustration-with-histograms" class="nav-link" data-scroll-target="#result-illustration-with-histograms">5.2.3 Result Illustration with Histograms</a></li>
+  <li><a href="#the-sla-delta-distribution" id="toc-the-sla-delta-distribution" class="nav-link" data-scroll-target="#the-sla-delta-distribution">2.4.1 The SLA Delta Distribution</a></li>
+  <li><a href="#factors-driving-variance-in-resolution-speed" id="toc-factors-driving-variance-in-resolution-speed" class="nav-link" data-scroll-target="#factors-driving-variance-in-resolution-speed">2.4.2 Factors Driving Variance in Resolution Speed</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#unsupervised-text-classification-bertopic-ollama" id="toc-unsupervised-text-classification-bertopic-ollama" class="nav-link" data-scroll-target="#unsupervised-text-classification-bertopic-ollama">6. Unsupervised Text Classification (BERTopic &amp; Ollama)</a>
@@ -4955,7 +4950,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">August 9, 2026</p>
+      <p class="date">August 10, 2026</p>
     </div>
   </div>
   
@@ -5022,8 +5017,8 @@ Table 1: Dataset Overview: Column types, unique values, and missing data.
 </figcaption>
 <div aria-describedby="tbl-data-dictionary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-6d33e949f27f0bf48923" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-6d33e949f27f0bf48923">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-fdd20f2a5113b7294139" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-fdd20f2a5113b7294139">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </figure>
@@ -5043,10 +5038,10 @@ Table 1: Dataset Overview: Column types, unique values, and missing data.
 </div>
 <p>Before examining the historical speed of the Resolved Cohort, we first interrogate the Backlog Cohort to diagnose the state of the municipal queue at the close of 2024.</p>
 </section>
-</section>
-<section id="open-requests-at-the-end-of-2024" class="level1">
-<h1>3. Open Requests at the End of 2024</h1>
-<p>We now dig into the subset of open requests. This will provide an example of how to stress-test a visual observation and detect a major operational disturbance.</p>
+<section id="backlog-diagnostics-identifying-exogenous-shocks" class="level2">
+<h2 class="anchored" data-anchor-id="backlog-diagnostics-identifying-exogenous-shocks">Backlog Diagnostics: Identifying Exogenous Shocks</h2>
+<p>Having partitioned the data, we first interrogate the Backlog Cohort. Analyzing unresolved requests provides a pristine example of how to stress-test a visual observation and mathematically detect major operational disturbances.</p>
+<p>By querying the dataset for work orders still active on December 31, 2024, the pipeline isolates over 40,000 open records and calculates the exact calendar age of each pending ticket.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
 <pre><code>Isolated 40,802 open records.</code></pre>
@@ -5067,8 +5062,8 @@ Figure 1: Age distribution of open requests at the end of 2024.
 </div>
 </div>
 </div>
-<p>Visual inspection suggests distinct peaks. A required step is questioning whether these represent real operational phenomena (like a seasonal surge) or are statistical artifacts caused by “binning bias” — the chosen width of the histogram buckets.</p>
-<p>Because our sample size is large (<span class="math inline">\(N &gt; 40,000\)</span>), we can test the robustness of the observation by altering the histogram resolution. If the peaks are real, they will persist whether we group the data by day, week, or month.</p>
+<p>Visual inspection suggests distinct peaks in the backlog age, specifically around 60 days and 170 days. A required step in operational forensics is questioning whether these represent real physical phenomena (like a seasonal surge) or are statistical artifacts caused by “binning bias”—the chosen width of the histogram buckets.</p>
+<p>Because our sample size is large, we can programmatically test the robustness of this observation by altering the histogram resolution. If the peaks are real, they will persist whether the data is grouped by day, week, or month.</p>
 <div id="fig-robust-binning" class="quarto-layout-panel">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-robust-binning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -5116,8 +5111,8 @@ Figure 2: Histograms of age distribution of open requests at the end of 2024, w
 </figcaption>
 </figure>
 </div>
-<p><a href="#fig-robust-binning" class="quarto-xref">Figure 2</a> suggests that the peaks at age 60-day and 170-day are robust. They do not seem to be binning artifacts. Yet, this statement is still based on visual inspection. So, the next step is to use a statistically rigorous test to check for peak presence.</p>
-<p>Hartigan’s Dip Test is a non-parametric test specifically designed to detect multimodality <span class="citation" data-cites="hartigan1985dip">(<a href="#ref-hartigan1985dip" role="doc-biblioref">Hartigan and Hartigan 1985</a>)</span>. The null hypothesis (<span class="math inline">\(H_0\)</span>) states that the distribution is unimodal. Mathematically, it calculates the “dip” statistic (<span class="math inline">\(D\)</span>), which is the maximum vertical distance between the empirical distribution function, <span class="math inline">\(F_n(x)\)</span>, and a modeled best-fitting unimodal distribution function, <span class="math inline">\(U(x)\)</span>: <span class="math display">\[D = \sup_x \vert{}F_n(x) - U(x)\vert{}\]</span> If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), <span class="math inline">\(F_n(x)\)</span> will deviate drastically from any possible unimodal curve and the <span class="math inline">\(p\)</span>-value will approach zero, definitively rejecting the null hypothesis.</p>
+<p><a href="#fig-robust-binning" class="quarto-xref">Figure 2</a> confirms that the peaks at 60 and 170 days are highly robust; they are not binning artifacts. Yet, this conclusion is still based on visual inspection. The next required step is deploying a statistically rigorous test to confirm peak presence mathematically.</p>
+<p>Hartigan’s Dip Test is a non-parametric test specifically designed to detect multimodality <span class="citation" data-cites="hartigan1985dip">(<a href="#ref-hartigan1985dip" role="doc-biblioref">Hartigan and Hartigan 1985</a>)</span>. The null hypothesis (<span class="math inline">\(H_0\)</span>) states that the distribution is unimodal. Mathematically, it calculates the “dip” statistic (<span class="math inline">\(D\)</span>), which is the maximum vertical distance between the empirical distribution function, <span class="math inline">\(F_n(x)\)</span>, and a modeled best-fitting unimodal distribution function, <span class="math inline">\(U(x)\)</span>: <span class="math display">\[D = \sup_x \vert{}F_n(x) - U(x)\vert{}\]</span> If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), <span class="math inline">\(F_n(x)\)</span> will deviate drastically from any possible unimodal curve and the <span class="math inline">\(p\)</span>-value will approach zero, rejecting the null hypothesis.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
 <pre><code>--- Hartigan&#39;s Dip Test for Unimodality ---
@@ -5143,16 +5138,16 @@ Figure 3: Visualization of departments contributions to open requests at the en
 </div>
 </div>
 </div>
-<p>The visualization explains the 170-day spike: the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.</p>
+<p>The visualization isolates the source of 170-day spike: the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.</p>
 <p>This blockage aligns perfectly with the <strong>Sumner Tunnel Restoration Project</strong>. MassDOT executed a full 24/7 closure from July 5 to August 5, 2024, with June dedicated to intense logistical preparation—altering traffic patterns, setting detours, and modifying transit routes. This monumental shift overwhelmed the Traffic Division’s capacity, creating a localized backlog that persisted through year-end.</p>
 <p>Beyond the June spike, the visualization reveals a secondary wave originating in October (the ~60-day backlog). Rather than a broad seasonal shift, this was a second, distinct shock striking the exact same department.</p>
 <p>In October 2024, the MBTA executed a multi-week <strong>shutdown of the Orange Line subway</strong>, replacing trains with surface-level shuttle buses. To accommodate this, the Traffic Division rapidly implemented severe street-level modifications across the southwest corridor, including removing parking spaces, creating pop-up bus lanes, and altering traffic flow.</p>
 <p>Like the summer closure, this logistical pivot overwhelmed the division. Routine neighborhood work orders were abandoned to manage the transit crisis, cementing a massive secondary backlog into the system right before the calendar year closed.</p>
 </section>
-<section id="resolution-time" class="level1">
-<h1>4. Resolution Time</h1>
-<p>Evaluating request resolution times using the average (mean) is a common pitfall. Maintenance completion times are rarely normally distributed. Instead, they exhibit a severe right skew: most tasks close quickly, while a handful of complex or disputed outliers remain open for months.</p>
-<p>This long tail artificially inflates the mean, distorting the true operational baseline. Consequently, the median provides the mathematically sound metric for evaluating performance and establishing Service Level Agreements (SLAs).</p>
+<section id="the-right-skew-flaw-defining-true-resolution-time" class="level2">
+<h2 class="anchored" data-anchor-id="the-right-skew-flaw-defining-true-resolution-time">2.3. The Right-Skew Flaw: Defining True Resolution Time</h2>
+<p>Evaluating service resolution times using the average (mean) is a fundamental operational pitfall. Maintenance completion times are rarely normally distributed; instead, they exhibit a severe right skew. Most tasks are triaged and closed quickly, while a long tail of complex, disputed, or heavily delayed outliers remains open for months.</p>
+<p>This extreme long tail artificially inflates the mean, severely distorting the true operational baseline. Consequently, the median provides the mathematically sound metric for evaluating performance and establishing Service Level Agreements (SLAs).</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-resolution-density-log" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5167,15 +5162,19 @@ Figure 4: Density of Maintenance Resolution Times (Log Scale)
 </div>
 </div>
 </div>
-<p>As the density visualization illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data fails to achieve log-normality. This mathematical reality precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies deployed in the next sections.</p>
+<p>As <a href="#fig-resolution-density-log" class="quarto-xref">Figure 4</a> illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data formally fails to achieve log-normality. This mathematical reality definitively precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies utilized in the subsequent analyses.</p>
 </section>
-<section id="sla-compliance-analytics" class="level1">
-<h1>5. SLA Compliance Analytics</h1>
-<p>Absolute resolution times only tell half the story. To truly evaluate vendor and operational performance, we must compare the completion timestamp (<code>closed_dt</code>) against the algorithmic deadline (<code>sla_target_dt</code>).</p>
-<p>This section isolates the subset of closed requests with defined service level agreements. We calculate a compliance rate (the percentage of tickets closed on or before their target date) grouped by the top service categories.</p>
-<section id="the-sla-delta-distribution-latenessearliness" class="level2">
-<h2 class="anchored" data-anchor-id="the-sla-delta-distribution-latenessearliness">5.1 The SLA Delta Distribution (Lateness/Earliness)</h2>
-<p>We now analyze the distribution of the SLA Delta (Actual Resolution Time minus SLA Target Time). A value of 0 means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values indicate the ticket was overdue.</p>
+<section id="isolating-the-causes-of-delay" class="level2">
+<h2 class="anchored" data-anchor-id="isolating-the-causes-of-delay">2.4 Isolating the Causes of Delay</h2>
+<p>To determine what systematically drives operational bottlenecks, we must establish a baseline for expected performance. In both municipal and property maintenance contexts, this baseline is governed by a Service Level Agreement (SLA)—a predefined, standardized target time for resolving a specific type of request.</p>
+<p>Absolute resolution times only tell half the story. Simply flagging tickets in a binary “pass/fail” manner strips away critical operational context. Instead, we calculate the signed delay <strong>SLA Delta</strong> for every closed ticket: the Actual Resolution Time minus the SLA Target Time.</p>
+<blockquote class="blockquote">
+<p><strong>Methodological Note:</strong> We measure delay in absolute time (raw days) rather than a relative percentage (SLA Delta / SLA Duration) because physical workforce constraints and real-world impacts are experienced in actual days, not administrative ratios. Furthermore, emergency triage tasks frequently have same-day SLAs (zero-day durations), which would introduce mathematically undefined values if a ratio were applied.</p>
+</blockquote>
+<p>By analyzing the continuous distribution of this signed delay across the entire dataset, we can begin to isolate the specific variables that trigger severe system lag.</p>
+<section id="the-sla-delta-distribution" class="level3">
+<h3 class="anchored" data-anchor-id="the-sla-delta-distribution">2.4.1 The SLA Delta Distribution</h3>
+<p>We first analyze the global distribution of the SLA Delta. A value of <span class="math inline">\(0\)</span> means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values mathematically quantify exactly how severely a ticket was overdue.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-sla-delta-distribution" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5190,19 +5189,19 @@ Figure 5: Distribution of SLA Delta.
 </div>
 </div>
 </div>
-<p>Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline. <a href="#fig-sla-delta-distribution" class="quarto-xref">Figure 5</a> shows a massive concentration of work orders closed immediately prior to the deadline, a sharp drop-off precisely at zero, and a long, right-skewed tail of overdue tickets.</p>
+<p>Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline. <a href="#fig-sla-delta-distribution" class="quarto-xref">Figure 5</a> shows a massive concentration of work orders closed immediately prior to the deadline, a sharp drop-off precisely at zero, and a right-skewed tail of overdue tickets.</p>
 </section>
-<section id="factors-driving-variance-in-sla-compliance" class="level2">
-<h2 class="anchored" data-anchor-id="factors-driving-variance-in-sla-compliance">5.2 Factors Driving Variance in SLA Compliance</h2>
+<section id="factors-driving-variance-in-resolution-speed" class="level3">
+<h3 class="anchored" data-anchor-id="factors-driving-variance-in-resolution-speed">2.4.2 Factors Driving Variance in Resolution Speed</h3>
 <p>To identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography,…) and the continuous SLA Delta.</p>
-<p>Because the dataset contains right-tail outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large <span class="math inline">\(N\)</span> value guarantees that all <span class="math inline">\(p\)</span>-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained (<span class="math inline">\(R^2\)</span>) unreliable.</p>
-<section id="the-mathematical-approach-volume-weighted-k-s-distance" class="level3">
-<h3 class="anchored" data-anchor-id="the-mathematical-approach-volume-weighted-k-s-distance">5.2.1 The Mathematical Approach: Volume-Weighted K-S Distance</h3>
+<p>Because the dataset contains outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large <span class="math inline">\(N\)</span> value guarantees that all <span class="math inline">\(p\)</span>-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained (<span class="math inline">\(R^2\)</span>) unreliable.</p>
+<section id="the-mathematical-approach-volume-weighted-k-s-distance" class="level4">
+<h4 class="anchored" data-anchor-id="the-mathematical-approach-volume-weighted-k-s-distance">The Mathematical Approach: Volume-Weighted K-S Distance</h4>
 <p>To correctly capture the true operational reality, we abandon variance and compare the <strong>Empirical Cumulative Distribution Functions (ECDFs)</strong> using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.</p>
 <p>First, we define <span class="math inline">\(F_{global}(x)\)</span> as the ECDF of the SLA Delta for the entire city-wide portfolio. For any given factor (e.g., Department), we split the data into <span class="math inline">\(K\)</span> individual levels (subgroups). We then define <span class="math inline">\(F_k(x)\)</span> as the ECDF for a specific subgroup <span class="math inline">\(k\)</span>.</p>
 <p>The standard K-S statistic <span class="math inline">\(D_k\)</span> measures the maximum absolute vertical distance between the subgroup’s ECDF and the global ECDF:</p>
 <p><span class="math display">\[D_k = \sup_x |F_k(x) - F_{global}(x)|\]</span></p>
-<p>This outputs a bounded value between <span class="math inline">\(0\)</span> (identical distributions) and <span class="math inline">\(1\)</span> (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to extreme outliers.</p>
+<p>This outputs a bounded value between <span class="math inline">\(0\)</span> (identical distributions) and <span class="math inline">\(1\)</span> (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to outliers.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-ks-statistic-explanation" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5218,8 +5217,8 @@ Figure 6: Graphical explanation of the Kolmogorov-Smirnov statistic.
 </div>
 </div>
 </section>
-<section id="results-the-dominance-of-organizational-routing" class="level3">
-<h3 class="anchored" data-anchor-id="results-the-dominance-of-organizational-routing">5.2.2 Results: The Dominance of Organizational Routing</h3>
+<section id="results-the-dominance-of-organizational-routing" class="level4">
+<h4 class="anchored" data-anchor-id="results-the-dominance-of-organizational-routing">Results: The Dominance of Organizational Routing</h4>
 <p>To evaluate the <em>overall</em> explanatory power of the categorical factor, we must aggregate the <span class="math inline">\(D_k\)</span> scores of its levels. A simple average would mathematically equate a queue with <span class="math inline">\(10\)</span> tickets to a queue with <span class="math inline">\(10,000\)</span> tickets. Therefore, we calculate the <strong>Volume-Weighted K-S Score</strong> (<span class="math inline">\(D_{weighted}\)</span>) by weighting each subgroup’s K-S statistic by its proportional volume:</p>
 <p><span class="math display">\[D_{weighted} = \sum_{k=1}^{K} \left( \frac{n_k}{N} \right) D_k\]</span></p>
 <p>Where <span class="math inline">\(n_k\)</span> is the total number of work orders in subgroup <span class="math inline">\(k\)</span>, and <span class="math inline">\(N\)</span> is the total volume across all subgroups. This penalizes noisy variance from tiny subgroups and rewards factors where massive subsets of work fundamentally deviate from the global baseline.</p>
@@ -5324,11 +5323,11 @@ Table 2: Factor Dependency Ranking (Weighted K-S Distance)
 </div>
 </div>
 <p><strong>Task &amp; Routing Dominance</strong>: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.</p>
-<p>**WARNING: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the <span class="math inline">\(p\)</span>-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.</p>
+<p>**Warning: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the <span class="math inline">\(p\)</span>-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.</p>
 <p>Ranking at the bottom only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.</p>
 </section>
-<section id="result-illustration-with-histograms" class="level3">
-<h3 class="anchored" data-anchor-id="result-illustration-with-histograms">5.2.3 Result Illustration with Histograms</h3>
+<section id="result-illustration-with-histograms" class="level4">
+<h4 class="anchored" data-anchor-id="result-illustration-with-histograms">Result Illustration with Histograms</h4>
 <p>While the K-S statistic is mathematically robust against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).</p>
 <p>By coloring the overall SLA Delta histogram by the top digital queues, we visually validate what the K-S test just measured. The distinct colors do not overlap uniformly; rather, they form separate, distinct operational distributions spanning from early completions to massive late backlogs.</p>
 <div class="cell">
@@ -5345,6 +5344,7 @@ Figure 7: SLA Delta Histogram for the top four values of factor ‘queue’
 </div>
 </div>
 </div>
+</section>
 </section>
 </section>
 </section>

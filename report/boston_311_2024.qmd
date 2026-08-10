@@ -179,11 +179,11 @@ cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "clo
 ```
 Before examining the historical speed of the Resolved Cohort, we first interrogate the Backlog Cohort to diagnose the state of the municipal queue at the close of 2024.
 
-# 3. Open Requests at the End of 2024
+## Backlog Diagnostics: Identifying Exogenous Shocks
 
-We now dig into the subset of open requests. This will provide an example of how to stress-test a visual observation and detect a major operational disturbance.
+Having partitioned the data, we first interrogate the Backlog Cohort. Analyzing unresolved requests provides a pristine example of how to stress-test a visual observation and mathematically detect major operational disturbances.
 
-
+By querying the dataset for work orders still active on December 31, 2024, the pipeline isolates over 40,000 open records and calculates the exact calendar age of each pending ticket. 
 ```{r}
 #| label: isolate-open-cases
 #| message: false
@@ -233,9 +233,9 @@ ggplot(boston_open, aes(x = days_open_at_yearend)) +
   )
 ```
 
-Visual inspection suggests distinct peaks. A required step is questioning whether these represent real operational phenomena (like a seasonal surge) or are statistical artifacts caused by "binning bias" — the chosen width of the histogram buckets.
+Visual inspection suggests distinct peaks in the backlog age, specifically around 60 days and 170 days. A required step in operational forensics is questioning whether these represent real physical phenomena (like a seasonal surge) or are statistical artifacts caused by "binning bias"—the chosen width of the histogram buckets.
 
-Because our sample size is large ($N > 40,000$), we can test the robustness of the observation by altering the histogram resolution. If the peaks are real, they will persist whether we group the data by day, week, or month.
+Because our sample size is large, we can programmatically test the robustness of this observation by altering the histogram resolution. If the peaks are real, they will persist whether the data is grouped by day, week, or month.
 
 ```{r}
 #| label: fig-robust-binning
@@ -280,11 +280,11 @@ boston_open %>%
   )
 ```
 
-@fig-robust-binning suggests that the peaks at age 60-day and 170-day are robust. They do not seem to be binning artifacts. Yet, this statement is still based on visual inspection. So, the next step is to use a statistically rigorous test to check for peak presence.
+@fig-robust-binning confirms that the peaks at 60 and 170 days are highly robust; they are not binning artifacts. Yet, this conclusion is still based on visual inspection. The next required step is deploying a statistically rigorous test to confirm peak presence mathematically.
 
 Hartigan's Dip Test is a non-parametric test specifically designed to detect multimodality [@hartigan1985dip]. The null hypothesis ($H_0$) states that the distribution is unimodal. Mathematically, it calculates the "dip" statistic ($D$), which is the maximum vertical distance between the empirical distribution function, $F_n(x)$, and a modeled best-fitting unimodal distribution function, $U(x)$:
 $$D = \sup_x \vert{}F_n(x) - U(x)\vert{}$$
-If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), $F_n(x)$ will deviate drastically from any possible unimodal curve and the $p$-value will approach zero, definitively rejecting the null hypothesis.
+If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), $F_n(x)$ will deviate drastically from any possible unimodal curve and the $p$-value will approach zero, rejecting the null hypothesis.
 
 
 ```{r}
@@ -367,7 +367,7 @@ ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
 
-The visualization explains the 170-day spike: the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
+The visualization isolates the source of 170-day spike: the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
 
 This blockage aligns perfectly with the **Sumner Tunnel Restoration Project**. MassDOT executed a full 24/7 closure from July 5 to August 5, 2024, with June dedicated to intense logistical preparation—altering traffic patterns, setting detours, and modifying transit routes. This monumental shift overwhelmed the Traffic Division's capacity, creating a localized backlog that persisted through year-end.
 
@@ -377,12 +377,11 @@ In October 2024, the MBTA executed a multi-week **shutdown of the Orange Line su
 
 Like the summer closure, this logistical pivot overwhelmed the division. Routine neighborhood work orders were abandoned to manage the transit crisis, cementing a massive secondary backlog into the system right before the calendar year closed.
 
-# 4. Resolution Time
+## 2.3. The Right-Skew Flaw: Defining True Resolution Time
 
-Evaluating request resolution times using the average (mean) is a common pitfall. Maintenance completion times are rarely normally distributed. Instead, they exhibit a severe right skew: most tasks close quickly, while a handful of complex or disputed outliers remain open for months.
+Evaluating service resolution times using the average (mean) is a fundamental operational pitfall. Maintenance completion times are rarely normally distributed; instead, they exhibit a severe right skew. Most tasks are triaged and closed quickly, while a long tail of complex, disputed, or heavily delayed outliers remains open for months.
 
-This long tail artificially inflates the mean, distorting the true operational baseline. Consequently, the median provides the mathematically sound metric for evaluating performance and establishing Service Level Agreements (SLAs).
-
+This extreme long tail artificially inflates the mean, severely distorting the true operational baseline. Consequently, the median provides the mathematically sound metric for evaluating performance and establishing Service Level Agreements (SLAs).
 
 ```{r}
 #| label: fig-resolution-density-log
@@ -426,17 +425,21 @@ ggplot(boston_clean, aes(x = resolution_days)) +
   )
 ```
 
-As the density visualization illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data fails to achieve log-normality. This mathematical reality precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies deployed in the next sections.
+As @fig-resolution-density-log illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data formally fails to achieve log-normality. This mathematical reality definitively precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies utilized in the subsequent analyses.
 
-# 5. SLA Compliance Analytics
+## 2.4 Isolating the Causes of Delay
 
-Absolute resolution times only tell half the story. To truly evaluate vendor and operational performance, we must compare the completion timestamp (`closed_dt`) against the algorithmic deadline (`sla_target_dt`). 
+To determine what systematically drives operational bottlenecks, we must establish a baseline for expected performance. In both municipal and property maintenance contexts, this baseline is governed by a Service Level Agreement (SLA)—a predefined, standardized target time for resolving a specific type of request.
 
-This section isolates the subset of closed requests with defined service level agreements. We calculate a compliance rate (the percentage of tickets closed on or before their target date) grouped by the top service categories.
+Absolute resolution times only tell half the story. Simply flagging tickets in a binary "pass/fail" manner strips away critical operational context. Instead, we calculate the signed delay **SLA Delta** for every closed ticket: the Actual Resolution Time minus the SLA Target Time.
 
-## 5.1 The SLA Delta Distribution (Lateness/Earliness)
+> **Methodological Note:** We measure delay in absolute time (raw days) rather than a relative percentage (SLA Delta / SLA Duration) because physical workforce constraints and real-world impacts are experienced in actual days, not administrative ratios. Furthermore, emergency triage tasks frequently have same-day SLAs (zero-day durations), which would introduce mathematically undefined values if a ratio were applied.
 
-We now analyze the distribution of the SLA Delta (Actual Resolution Time minus SLA Target Time). A value of 0 means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values indicate the ticket was overdue.
+By analyzing the continuous distribution of this signed delay across the entire dataset, we can begin to isolate the specific variables that trigger severe system lag.
+
+### 2.4.1 The SLA Delta Distribution
+
+We first analyze the global distribution of the SLA Delta. A value of $0$ means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values mathematically quantify exactly how severely a ticket was overdue.
 
 ```{r}
 #| label: fig-sla-delta-distribution
@@ -474,15 +477,15 @@ ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
   theme(legend.position = "top")
 ```
 
-Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline. @fig-sla-delta-distribution shows a massive concentration of work orders closed immediately prior to the deadline, a sharp drop-off precisely at zero, and a long, right-skewed tail of overdue tickets.
+Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline. @fig-sla-delta-distribution shows a massive concentration of work orders closed immediately prior to the deadline, a sharp drop-off precisely at zero, and a right-skewed tail of overdue tickets.
 
-## 5.2 Factors Driving Variance in SLA Compliance
+### 2.4.2 Factors Driving Variance in Resolution Speed
 
 To identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography,...) and the continuous SLA Delta. 
 
-Because the dataset contains right-tail outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
+Because the dataset contains outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
 
-### 5.2.1 The Mathematical Approach: Volume-Weighted K-S Distance
+#### The Mathematical Approach: Volume-Weighted K-S Distance
 
 To correctly capture the true operational reality, we abandon variance and compare the **Empirical Cumulative Distribution Functions (ECDFs)** using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.
 
@@ -492,7 +495,7 @@ The standard K-S statistic $D_k$ measures the maximum absolute vertical distance
 
 $$D_k = \sup_x |F_k(x) - F_{global}(x)|$$
 
-This outputs a bounded value between $0$ (identical distributions) and $1$ (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to extreme outliers.
+This outputs a bounded value between $0$ (identical distributions) and $1$ (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to outliers.
 
 ```{r}
 #| label: fig-ks-statistic-explanation
@@ -577,7 +580,7 @@ ggplot(plot_data, aes(x = sla_delta_days, color = Curve)) +
   )
 ```
 
-### 5.2.2 Results: The Dominance of Organizational Routing
+#### Results: The Dominance of Organizational Routing
 
 To evaluate the *overall* explanatory power of the categorical factor, we must aggregate the $D_k$ scores of its levels. A simple average would mathematically equate a queue with $10$ tickets to a queue with $10,000$ tickets. Therefore, we calculate the **Volume-Weighted K-S Score** ($D_{weighted}$) by weighting each subgroup's K-S statistic by its proportional volume:
 
@@ -656,11 +659,11 @@ kable(
 
 **Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
 
-**WARNING: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the $p$-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.
+**Warning: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the $p$-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.
 
 Ranking at the bottom only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
 
-### 5.2.3 Result Illustration with Histograms
+#### Result Illustration with Histograms
 
 While the K-S statistic is mathematically robust against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).
 
