@@ -42,15 +42,17 @@ boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 
 # 1. Goals & Executive Summary: Applied Analytics for Maintenance Operations
 
+## 1.1 Goals
+
 This report demonstrates the value of applying advanced Data Science (DS) and Operations Research (OR) methodologies to extract actionable operational intelligence from databases of service requests. Managing large-scale property portfolios—spanning hundreds of buildings and thousands of service requests—requires more than basic descriptive dashboards. Reporting metrics like average completion times or SLA (Service Level Agreement) compliance rates frequently mask bottlenecks. They obscure capital constraints, disguise inefficient resource allocation, and fail to measure true workforce capacity.
 
-## The Example Dataset (Boston 311)
+## 1.2 The Example Dataset (Boston 311)
 
 To demonstrate the application and value of these methodologies, this report utilizes the publicly available Boston 311 (Year 2024) dataset as an applied proxy.
 
 Boston’s geographic districts and digital queues serve as a practical analog for decentralized property management. Just as a real estate portfolio is divided into building subsets managed by local teams, the city's workload is distributed across distinct neighborhoods. By treating constituent requests as tenant service orders, this document provides a demonstrative case study. While every new dataset is unique and requires its own custom detective work, this report illustrates how applying advanced analytics uncovers local bottlenecks, evaluates geographic equity, and models workforce dynamics.
 
-## Key findings
+## 1.3 Key findings
 
 By applying Data Science and Operations Research methods to the 2024 dataset (242,033 closed records and 40,802 open records), we isolated key operational drivers of municipal service. Standard reporting metrics frequently fail in maintenance environments; this analysis relies on robust, non-parametric statistics and machine learning to correct those flaws and uncover the following structural insights:
 
@@ -72,7 +74,7 @@ To complement survival analysis and identify key resolution factors, we utilized
 
 **Isolating Zones of Systemic Neglect**: A common statistical fallacy is assuming geographic equity exists just because flat geographical categories (like zip codes or wards) yield small effect sizes compared to organizational drivers. Categorical bins inherently destroy physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the LISA analysis mathematically maps structural inequality (@fig-spatial-equity-lisa). It identifies three distinct "High-High" clusters of systemic neglect that are geographically severed from the city's central core: Allston-Brighton (Western), East Boston (Northeast), and Charlestown (Northern). Exceptionally prompt service ("Low-Low") is heavily clustered in the downtown municipal core.
 
-## Potential Transferability to Property Management
+## 1.4 Potential Transferability to Property Management
 
 While this report leverages a municipal dataset, the mathematical framework is partly transferable to large-scale property maintenance. Decentralized real estate portfolios face similar structural challenges regarding resource allocation, physical dependencies, and workforce capacity. For example:
 
@@ -179,7 +181,7 @@ cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "clo
 ```
 Before examining the historical speed of the Resolved Cohort, we first interrogate the Backlog Cohort to diagnose the state of the municipal queue at the close of 2024.
 
-## Backlog Diagnostics: Identifying Exogenous Shocks
+## 2.2 Backlog Diagnostics: Identifying Exogenous Shocks
 
 Having partitioned the data, we first interrogate the Backlog Cohort. Analyzing unresolved requests provides a pristine example of how to stress-test a visual observation and mathematically detect major operational disturbances.
 
@@ -721,25 +723,22 @@ ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
 
-# 6. Unsupervised Text Classification (BERTopic & Ollama)
+## 2.5 Text Analytics: Extracting Operational Signals from Unstructured Data
 
-To uncover the operational themes driving SLA delays without human bias or arbitrary keyword guessing, we deployed an unsupervised, locally hosted deep learning pipeline.
+Unstructured free text (such as the closure_reason notes left by technicians) might contain information that flat categorical factors could miss. Extracting actionable signals from hundreds of thousands of raw text entries requires advanced Natural Language Processing (NLP).
 
-Using the sentence-transformers architecture [@reimers2019] on Apple Silicon, we converted unstructured closure notes into high-dimensional embeddings, clustering them via HDBSCAN [@mcinnes2017hdbscan].
+The first NLP approach we use relies on an unsupervised machine learning pipeline. This approach allows us to uncover broad operational themes driving delays.
 
-Because raw statistical labels often lack semantic clarity, we integrated a local Large Language Model (Llama 3 via Ollama [@ollama2024]) to translate these clusters into clean, executive-ready categories.
+### 2.5.1 Unsupervised Classification via Deep Learning
 
-Given the computational weight of Transformer models, the initial Python classification script was executed asynchronously. The results were saved to a static dataset, ensuring the compilation of this report remains lightweight.
+To categorize the raw text, we deployed a locally hosted deep learning pipeline. We utilized BERTopic [@grootendorst2022] combined with a Hugging Face embedding model built on the sentence-transformers architecture [@reimers2019] to group the closure notes into distinct sets. The background scripts convert unstructured text into high-dimensional numerical embeddings, which are then clustered via the HDBSCAN algorithm [@mcinnes2017hdbscan].
 
-### 6.1 The Python AI Pipeline
+Because of the heavy computational weight of Transformer models, this initial Python classification script was executed asynchronously. The results were saved to a static dataset, ensuring the compilation of this report remains lightweight.
 
-We utilized BERTopic [@grootendorst2022] combined with a [Hugging Face embedding model](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) to group the closure notes into distinct operational bottlenecks.
+Once the AI groups the unstructured text, we apply a mathematical text-cleaning function to extract the core themes. We utilize c-TF-IDF (Class-based Term Frequency-Inverse Document Frequency). Unlike standard TF-IDF, which evaluates individual documents, c-TF-IDF treats all tickets in a single cluster as one massive "super-document." This mathematically isolates the exact keywords that make a specific operational cluster unique compared to the global baseline.
 
-### 6.2 Visualizing the AI Clusters
+(Note: The clustering algorithm assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern).
 
-With the AI having categorized the unstructured text, we can now visualize the exact volume of delayed tickets attributed to each systemic issue. We apply a lightweight text-cleaning function in R to make the raw c-TF-IDF (Class-based Term Frequency-Inverse Document Frequency) labels readable. Unlike standard TF-IDF which evaluates individual documents, c-TF-IDF treats all documents in a single cluster as a single super-document, mathematically extracting the words that make that specific operational cluster unique compared to all others.
-
-(Note: BERTopic assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern).
 
 ```{r}
 #| label: fig-plot-bertopic-results
@@ -786,11 +785,11 @@ ggplot(ai_plot_data, aes(x = n, y = reorder(clean_topic, n))) +
   )
 ```
 
-## 6.3 Refining Labels with Local Generative AI (Ollama)
+### 2.5.2 Refining Labels with Local Generative AI (Ollama)
 
-While the plots above successfully utilize the mathematical c-TF-IDF keyword strings (e.g., "Related Responds Patrols Encourage"), these labels lack human context.
+While the initial pipeline successfully groups the data using mathematical c-TF-IDF keyword strings (e.g., "Related Responds Patrols Encourage"), these raw statistical labels lack human context and readability.
 
-To bridge the gap between machine-readable statistics and executive-ready dashboards, we execute a 100% offline workflow using R's httr package to query a local Llama 3 instance via Ollama. This acts as an automated formatting bot, applying municipal context to translate the raw statistical outputs into polished categories. We will use these clean labels for subsequent analysis.
+To bridge the gap between machine-readable statistics and executive-ready dashboards, we execute a 100% offline workflow using R's httr package to query a local Llama 3 instance via Ollama [@ollama2024]. This acts as an automated, localized formatting bot, applying municipal context to translate the raw statistical strings into polished operational categories.
 
 ```{r}
 #| label: tbl-llm-topic-translation
@@ -900,7 +899,7 @@ ggplot(ai_plot_data_translated, aes(x = n, y = reorder(final_label, n))) +
   )
 ```
 
-## 6.4 Departmental Topic Enrichment
+### 2.5.3 Departmental Topic Enrichment
 
 Now equipped with clean, AI-generated operational labels, we can mathematically test how these unsupervised clusters map to actual municipal departments.
 
@@ -970,13 +969,13 @@ ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
 
 The results demonstrate clear organizational clustering: "Tree Pruning Operations" is intensely concentrated within the Parks Department (PARK), while "Cart Maintenance" heavily dominates Public Works (PWDX). Additionally, "Customer Feedback" shows a strong operational enrichment within the Mayor's Hotline (INFO). These highly localized, deep-red signals confirm that the unsupervised NLP pipeline successfully extracted distinct, department-specific operational themes directly from the unstructured closure notes.
 
-# 7. Seasonal Demand and System Capacity
+## 2.6 Seasonal Demand and System Capacity
 
 To optimize workforce schedules, we must understand seasonal demand fluctuations. High demand alone is not problematic if the workforce is appropriately scaled to handle it.
 
-The true operational insight lies in comparing total inbound ticket volume (Demand) against the volume of missed SLAs (System Failure) month over month. This reveals the moments when operational capacity is overwhelmed by seasonal surges.
+The true operational insight lies in comparing total inbound ticket volume (Demand) against the volume of missed SLAs (System Failure) month over month. This can reveal the moments when operational capacity is overwhelmed by seasonal surges.
 
-## 7.1 Citywide Macro Trends
+### 2.6.1 Citywide Macro Trends
 
 We first look at the aggregate stress placed on Boston's municipal infrastructure across the entire year.
 
@@ -1037,7 +1036,7 @@ ggplot(global_summary, aes(x = created_month, y = Volume, group = Metric, color 
   )
 ```
 
-## 7.2 Departmental Micro Trends
+### 2.6.2 Departmental Micro Trends
 
 While the citywide view provides the baseline, operational failures are rarely distributed evenly. By breaking the seasonality down by the highest-volume departments, we can see how different seasonal events (e.g., winter storms vs. summer park usage) might trigger capacity thresholds across distinct municipal departments.
 
@@ -1097,21 +1096,23 @@ ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = 
   )
 ```
 
-## 7.3 The Limits of Unsupervised NLP on Seasonal Surges
+### 2.6.3 The Limits of Unsupervised NLP on Seasonal Surges
 
-Re-applying the text classification pipeline from Section 6 to diagnose these seasonal trends failed to produce statistically valid results.
+Re-applying the AI text classification pipeline from the previous section to diagnose these highly specific seasonal trends failed to produce statistically valid results.
 
 While the unsupervised model successfully identified global operational bottlenecks, slicing the unstructured text into department-and-month-specific windows severely degraded the signal-to-noise ratio. At this granular level, the AI clusters were overwhelmed by generic administrative shorthand rather than distinct physical phenomena.
 
-Because unstructured text mining could not reliably explain these seasonal surges, we shift from descriptive categorization to measuring the system's mathematical dynamics: analyzing workforce velocity and system survival rates in the following sections.
-  
-# 8. Operational Reliability (Survival Analysis)
+However, while text analytics provides critical context for what is breaking down, it fundamentally cannot measure how fast the breakdown occurs. To truly understand workforce capacity and quantify how these seasonal surges alter resolution speeds, we must shift from descriptive categorization to mathematical dynamics. The next phases of this diagnostic deploy survival analysis and queueing theory to explicitly measure true workforce velocity.
+
+## 2.7 Operational Reliability (Survival Analysis)
 
 While average resolution times are commonly used in municipal reporting, they suffer from a severe statistical flaw: survivorship bias. By excluding tickets that are currently open, standard averages artificially deflate the apparent resolution time of heavily backlogged departments.
 
-## 8.1 Kaplan-Meier
+To capture the true operational reliability of the city, we apply time-to-event Survival Analysis.
 
-To capture the true operational reliability of the city, we apply time-to-event Survival Analysis. Using the Kaplan-Meier estimator, we plot the exact probability that a constituent's request will remain unresolved as days pass, handling open tickets as right-censored data points.
+### 2.7.1 Kaplan-Meier Survival
+
+Using the non-parametric Kaplan-Meier estimator, we plot the exact probability that a constituent's request will remain unresolved as days pass, treating open tickets as censored data points.
 
 ```{r}
 #| label: fig-survival-analysis-departments
@@ -1171,21 +1172,24 @@ The Kaplan-Meier estimation reveals stark differences in how municipal departmen
 
 **Parks and Recreation (PARK)**: The purple curve is the critical anomaly. While PARK resolves about half of its tickets in the first few days, the curve abruptly flattens into a concrete floor. By day 20, nearly 30% of their tickets remain open, and approximately 20% are essentially abandoned past the 60-day mark. This mathematical "long-tail" confirms that PARK does not suffer from a simple speed issue, but rather a structural inability to clear complex tickets, heavily implying capital budget constraints or a reliance on seasonal workforce unlocks.
 
-## 8.2 Multivariate Drivers of Resolution (Cox Proportional Hazards)
+### 2.7.2 Multivariate Drivers of Resolution (Cox Proportional Hazards)
 
-While the Kaplan-Meier curves show us the overall survival rate of tickets by department, municipal operations do not exist in a vacuum. A ticket's resolution time is simultaneously influenced by the department assigned, the method the constituent used to report it, and whether it includes rich context like photographs.To untangle these overlapping variables, we apply a Cox Proportional Hazards Model:
+While the Kaplan-Meier curves show us the overall survival rate of tickets by department, municipal operations do not exist in a vacuum. A ticket's resolution time is simultaneously influenced by the department assigned, the method the constituent used to report it, and whether it includes rich context like photographs.
+
+To untangle these overlapping variables, we apply a Cox Proportional Hazards Model:
 $$h(t\vert{}X) = h_0(t) \exp(\beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p)$$
 Where:
 
-* $t$ represents the time elapsed (in days) since the request was opened.
-* $h(t\vert{}X)$ is the hazard rate. In this operational context, it is the probability of the ticket successfully closing at time $t$, given a specific set of operational variables $X$.
-* $h_0(t)$ is the baseline hazard, representing the underlying resolution speed of the system when all variables are held at their default reference levels.
-* $X_1, \dots, X_p$ are the categorical and continuous predictor variables (our covariates, such as department and reporting source).$\beta_1, \dots, \beta_p$ are the coefficients estimated by the regression model.
+- $t$ represents the time elapsed (in days) since the request was opened.
+- $h(t\vert{}X)$ is the hazard rate. In this operational context, it is the probability of the ticket successfully closing at time $t$, given a specific set of operational variables $X$.
+- $h_0(t)$ is the baseline hazard, representing the underlying resolution speed of the system when all variables are held at their default reference levels.
+- $X_1, \dots, X_p$ are the predictor variables (our covariates, such as department and reporting source).
+- $\beta_1, \dots, \beta_p$ are the coefficients estimated by the regression model.
 
 This multivariate regression exponentiates these coefficients ($\exp(\beta)$) to calculate a Hazard Ratio (HR) for each variable. In this context, a "hazard" is a positive event (closing the ticket).
 
-* HR > 1: The variable mathematically accelerates resolution (e.g., an HR of 1.5 means the ticket is closed 50% faster than the baseline).
-* HR < 1: The variable acts as a bottleneck, delaying resolution.
+- HR > 1: The variable mathematically accelerates resolution (e.g., an HR of 1.5 means the ticket is closed 50% faster than the baseline).
+- HR < 1: The variable acts as a bottleneck, delaying resolution.
 
 ```{r}
 #| label: fig-cox-regression-model-adjusted
@@ -1247,17 +1251,19 @@ ggplot(tidy_cox, aes(x = estimate, y = clean_term, color = is_significant)) +
   )
 ```
 
-In the multivariate forest plot, the central dashed line at 1.00 establishes baseline resolution speed. Dots represent the Hazard Ratio (HR)—a direct speed multiplier. Variables to the right (HR > 1) accelerate resolution; those to the left (HR < 1) act as bottlenecks. The horizontal bars indicate 95% confidence intervals. Because none cross the baseline, we can state with 95% statistical confidence that these variables genuinely impact workforce velocity, rejecting the possibility of random anomalies.
+In the multivariate forest plot, the central dashed line at $1.00$ establishes baseline resolution speed. Dots represent the Hazard Ratio (HR)—a direct speed multiplier. Variables to the right ($HR > 1$) accelerate resolution; those to the left ($HR < 1$) act as bottlenecks. The horizontal bars indicate 95% confidence intervals. Because none cross the baseline, we can state with 95% statistical confidence that these variables genuinely impact workforce velocity, rejecting the possibility of random anomalies.
 
-Filtering out automated "Maximo Integration" API calls isolates true human labor, revealing that resolution speed heavily depends on departmental capacity and intake friction. 
+**Public Works (PWDx)** operates at nearly double the baseline speed, validating its rapid triage design.
 
-* **Public Works (PWDx)** operates at nearly double the baseline speed, validating its rapid triage design
-* **Parks (PARK)** faces a 35% speed deficit from long-tail bottlenecks. 
-* **INFO**: manual intake channels like phone calls introduce administrative friction, slowing resolution pipelines by roughly 22% compared to digitally precise reporting.
+**Parks (PARK)** faces a 35% speed deficit from long-tail bottlenecks.
 
-# 9. System Stability: Queueing Theory and Backlog Velocity
+**INFO**: Manual intake channels like constituent phone calls introduce heavy administrative friction, slowing resolution pipelines by roughly 22% compared to digitally precise reporting via web portals.
 
-While Survival Analysis evaluates the lifespan of individual tickets, it does not measure the aggregate dynamic health of a department. To diagnose systemic instability, we must shift from the ticket level to the macro system level using Queueing Theory. This approach relies strictly on the mathematical balance between the Arrival Rate ($\lambda$)—tickets opened—and the Service Rate ($\mu$)—tickets closed. By calculating the net weekly queue change, we can strip away subjective text and measure pure operational dynamics. When $\lambda > \mu$, the system enters a state of structural instability (growing backlog), regardless of how fast routine tickets are closed.
+## 2.8 System Stability: Queueing Theory and Backlog Velocity
+
+While Survival Analysis evaluates the lifespan of individual tickets, it does not measure the aggregate dynamic health of a department. To diagnose systemic instability, we must shift from the ticket level to the macro system level using Queueing Theory. 
+
+This approach relies strictly on the mathematical balance between the Arrival Rate ($\lambda$)—tickets opened—and the Service Rate ($\mu$)—tickets closed. By calculating the net weekly queue change, we can strip away subjective text and measure pure operational dynamics. When $\lambda > \mu$, the system enters a state of structural instability (growing backlog), regardless of how fast routine tickets are closed.
 
 ```{r}
 #| label: fig-queue-velocity-analysis
@@ -1334,13 +1340,13 @@ The Backlog Velocity chart maps the behavioral pulse of the city's workforce wit
 
 **ISD**: Inspectional Services demonstrates a steady accumulation of backlog through the spring months, directly aligning with the seasonal surge in construction and housing permits. Sustained recovery does not begin until mid-summer, indicating a persistent, multi-month lag between peak citizen demand and peak service delivery.
 
-# 10. Spatial Equity (Geospatial Autocorrelation)
+## 2.9 Spatial Equity (Geospatial Autocorrelation)
 
 While overall departmental velocity provides a measure of system health, it does not address the distribution of that service. A critical mandate of municipal operations is equitable service delivery across all neighborhoods.
 
 To mathematically test if operational failures are equitably distributed or geographically biased, we apply spatial autocorrelation using Global Moran’s I [@moran1950notes; @li2007beyond]. By mapping the SLA breach rates (the percentage of tickets that miss their target resolution time) across Boston's spatial boundaries, we can identify statistically significant "cold spots"—clusters of neighborhoods that systematically receive delayed service compared to the citywide baseline.
 
-## 10.1 Mapping SLA Breach Clusters
+### 2.9.1 Mapping SLA Breach Clusters
 
 To mathematically test if operational failures are equitably distributed or geographically biased, we apply spatial autocorrelation using Global Moran’s I. The statistic compares the variance of SLA breach rates across neighboring areas against the overall citywide variance:
 $$I = \frac{N}{W} \frac{\sum_i \sum_j w_{ij}(x_i - \bar{x})(x_j - \bar{x})}{\sum_i (x_i - \bar{x})^2}$$
@@ -1352,7 +1358,7 @@ Where:
 * $w_{ij}$ is the spatial weight matrix determining how tract $i$ and tract $j$ are connected (typically $1$ if they share a physical border, and $0$ if they do not).
 * $W$ is the sum of all spatial weights ($W = \sum_i \sum_j w_{ij}$).
 
-An index near $0$ implies that service delays are completely random ("equitable failure"). A positive index approaching $1$ proves that SLA breaches are structurally clustered, creating "cold spots" of systematic neglect. To ensure we are measuring true human equity rather than software architecture, automated closures originating from the "maximo integration" API have been strictly filtered out of this spatial model.
+An index near $0$ implies that service delays are completely random ("equitable failure"). A positive index approaching $1$ proves that SLA breaches are structurally clustered, creating "cold spots" of systematic neglect. 
 
 ```{r}
 #| label: fig-spatial-equity-morans-i
@@ -1406,8 +1412,7 @@ ggplot(tract_breaches) +
     title = "Spatial Equity of Municipal Services",
     subtitle = paste0("Global Moran's I: ", round(moran_result$estimate[1], 3), 
                       " (p-value: ", signif(moran_result$p.value, 3), ")"),
-    fill = "SLA Breach Rate",
-    caption = "Excludes automated Maximo Integration closures to isolate human workforce equity."
+    fill = "SLA Breach Rate"
   ) +
   theme(
     plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
@@ -1420,11 +1425,10 @@ ggplot(tract_breaches) +
 
 Visually, the map strongly corroborates this test: census tracts experiencing severe SLA breach rates (the bright orange and yellow zones exceeding 30%) are geographically contiguous, forming structural "hotspots" of operational delay. Conversely, neighborhoods receiving highly efficient service (the dark purple and black zones hovering around a 10% breach rate) form their own distinct, localized clusters. This definitive spatial autocorrelation proves that the promptness of municipal service is systematically tied to geographic location.
 
-## 10.2 Localized Clusters of Neglect (LISA)
+### 2.9.2 Localized Clusters of Neglect (LISA)
 
 Having proven that municipal delays are not uniformly distributed, we apply Local Indicators of Spatial Association (LISA) [@anselin1995local] to mathematically draw boundaries around the city's operational "hotspots" and "coldspots." By scaling the breach rates and calculating their spatial lags, we can isolate census tracts that suffer from statistically significant, systemic neglect.
 
-Crucially, because automated closures originating from the "Maximo Integration" API have been removed from this spatial model, the resulting clusters represent genuine disparities in human workforce deployment and street-level service delivery.
 
 ```{r}
 #| label: fig-spatial-equity-lisa
@@ -1479,8 +1483,7 @@ ggplot(lisa_tracts) +
   labs(
     title = "Zones of Systemic Neglect vs. Exceptional Service",
     subtitle = "Statistically significant spatial clusters of 311 SLA breaches (Local Moran's I, p < 0.05).",
-    fill = "LISA Classification",
-    caption = "Excludes automated 'maximo integration' closures to isolate human workforce equity."
+    fill = "LISA Classification"
   ) +
   theme(
     plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
@@ -1502,6 +1505,12 @@ The LISA analysis identifies three distinct "High-High" clusters of systemic neg
 
 Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicating localized clusters of exceptionally prompt service delivery—are positioned centrally, situated within and immediately adjacent to the downtown municipal core. This spatial reality demonstrates that while service delays are not randomly distributed, they form distinct, localized geographic pockets that merit targeted operational review.
 
+# 3. References
+
+::: {#refs}
+:::
+
+
 # Appendix: R and Python Code
 
 ## Section 1
@@ -1516,7 +1525,7 @@ Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicatin
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 ```
 
-## Section 2
+## Section 2.1
 
 ```{r}
 #| label: data-dictionary-A
@@ -1578,7 +1587,7 @@ write_csv(boston_clean, here("data", "boston_clean.csv"))
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
 
-## Section 3
+## Section 2.2
 
 ```{r}
 #| label: isolate-open-cases-A
@@ -1752,7 +1761,7 @@ ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
 
-## Section 4
+## Section 2.3
 
 ```{r}
 #| label: resolution-density-log-A
@@ -1796,7 +1805,7 @@ ggplot(boston_clean, aes(x = resolution_days)) +
   )
 ```
 
-## Section 5
+## Section 2.4
 
 ```{r}
 #| label: fig-sla-delta-distribution-A
@@ -2029,7 +2038,7 @@ ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
 
-## Section 6
+## Section 2.5
 
 ```{python}
 #| label: bertopic-pipeline
@@ -2235,7 +2244,7 @@ ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
   )
 ```
 
-## Section 7
+## Section 2.6
 
 ```{r}
 #| label: fig-seasonal-trends-global-A
@@ -2352,7 +2361,7 @@ ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = 
   )
 ```
 
-## Section 8
+## Section 2.7
 
 ```{r}
 #| label: fig-survival-analysis-departments-A
@@ -2466,7 +2475,7 @@ ggplot(tidy_cox, aes(x = estimate, y = clean_term, color = is_significant)) +
   )
 ```
 
-## Section 9
+## Section 2.8
 
 ```{r}
 #| label: fig-queue-velocity-analysis-A
@@ -2534,7 +2543,7 @@ ggplot(backlog_velocity, aes(x = week, y = net_queue_change, fill = status)) +
   )
 ```
 
-## Section 10
+## Section 2.9
 
 ```{r}
 #| label: fig-spatial-equity-morans-i-A
