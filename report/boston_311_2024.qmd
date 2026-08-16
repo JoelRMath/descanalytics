@@ -68,7 +68,7 @@ By applying Data Science and Operations Research methods to the 2024 dataset (24
 
 **Exogenous Shocks & Cumulative Backlogs**: Visualizing unresolved tickets revealed backlog peaks at 60 and 170 days (@fig-open-tickets-distribution). Because visual peaks can be artifacts of data binning, we mathematically confirmed their existence using the robust non-parametric Hartigan’s Dip Test, yielding an effect size and p-value that definitively ruled out random chance (@fig-robust-binning). Cross-referencing these spikes by department proved they were not general trends, but related to collapses of the Transportation Department's queue (@fig-open-tickets-by-month). These surges align with known severe infrastructure shocks in 2024: the Sumner Tunnel Restoration Project (June) and the Orange Line shutdown (October). 
 
-**The Right-Skew Flaw & Organizational Routing**: The Right-Skew Flaw & Organizational Routing: Service completion times are severely right-skewed and fail to fit a normal distribution even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times artificially inflates performance metrics. Using robust non-parametric testing (volume-weighted KS test) to analyze SLA closures (@fig-sla-delta-distribution), we proved that resolution compliance is predominantly dictated by organizational routing—the digital queue assignments and task categorizations (e.g., queue, type, department)—rather than standard geographical constraints (e.g., zipcode, ward, district) (@tbl-factor-ranking, @fig-queue-histogram).
+**The Right-Skew Flaw & Organizational Routing**: Service completion times are severely right-skewed and fail to fit a normal distribution even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times artificially inflates performance metrics. Using robust non-parametric testing (volume-weighted K-S test) to analyze SLA closures (@fig-sla-delta-distribution), we show that resolution compliance is predominantly dictated by *functional organizational routing*—such as the digital `queue` and task `type`—rather than circumstantial geographical constraints like `zipcode`, `ward`, or `neighborhood   (@tbl-factor-ranking, @fig-factor-ranking-lollipop). These digital routing assignments are not merely administrative tags; they dictate exactly *what* the physical task is and *who* is assigned to it. Because task type dictates the *complexity* of the physical work, *organizational routing* acts as the *structural driver of the SLA* timeline.
 
 **AI-Driven Text Analytics**: The dataset contains a massive volume of unstructured free text (closure_reason). We deployed an unsupervised AI clustering pipeline to programmatically extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into executive-ready categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are heavily enriched within specific departments (@fig-topic-factor-enrichment). However, we noted the limits of this approach: attempting to use free-text clustering to explain granular seasonal demand surges (@fig-seasonal-trends-global, @fig-seasonal-trends-department) resulted in a degraded signal, necessitating mathematical queueing analysis instead.
 
@@ -718,7 +718,7 @@ ggplot(plot_ks, aes(x = Weighted_KS_Score, y = Clean_Factor, color = Macro_Categ
   )
 ```
 
-**Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
+**Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational and functional. Rather than describing where a ticket is, these factors dictate exactly *what* the physical task is and *who* is assigned to it. Because the *nature* of the task dictates its inherent *complexity*, required labor, and necessary equipment, it fundamentally *drives the SLA* resolution timeline. Circumstantial dimensions (like neighborhood geography) do not alter the physical reality of the work, which explains their inability to shift the timeline variance compared to the global baseline.
 
 **The Limitation of Administrative Boundaries**: Spatial features (precinct, ward, location_zipcode, and municipal districts) cluster uniformly at the bottom of the K-S results. It is critical not to misinterpret this low ranking as proof that geographic equity exists. Ranking at the bottom only proves that slicing data by arbitrary, massive administrative boundaries is a mathematically poor way to measure service delivery. Categorical bins destroy physical topology; they average out street-level disparities, and a dropdown variable possesses no mathematical awareness of its physical neighbors. Accurately measuring true geographic equity requires evaluating continuous spatial relationships, which is explicitly tested via spatial autocorrelation in Section 2.9.
 
@@ -1649,7 +1649,7 @@ kable(excluded_factors, align = c('l', 'c', 'l'))
 #| warning: false
 #| fig-width: 12
 #| fig-height: 10
-#| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean Expected MI."
+#| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean EMI."
 
 library(ggplot2)
 library(dplyr)
@@ -1707,6 +1707,62 @@ ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
     panel.grid.minor = element_blank()
   )
 ```
+
+```{r}
+#| label: fig-pmi-departments
+#| echo: false
+#| warning: false
+#| fig-width: 12
+#| fig-height: 8
+#| fig-cap: "The Semantic Footprint of Municipal Departments: Top 10 words uniquely tethered to six distinct city departments. Ranked by PMI, with perfect-exclusivity ties broken by word volume."
+
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tidytext)
+
+pmi_results <- read_csv("../data/pmi_results.csv", show_col_types = FALSE)
+
+target_departments <- c("BPD_", "PARK", "PWDx", "ISD_", "INFO", "BTDT")
+
+# 1. Filter, rank, and break ties with volume
+plot_data_pmi <- pmi_results %>%
+  filter(factor == "department", level %in% target_departments) %>%
+  group_by(level) %>%
+  # Sort by PMI first. If perfectly tied (100% exclusive), sort by highest volume
+  arrange(desc(pmi), desc(n_wc)) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  # Add a tiny fraction of n_wc to PMI just for reorder_within, 
+  # so perfectly tied bars are sorted visually by volume on the Y-axis
+  mutate(word = reorder_within(word, pmi + (n_wc/1000000), level))
+
+# 2. Generate the visual table with scaled-up fonts
+ggplot(plot_data_pmi, aes(x = pmi, y = word, fill = level)) +
+  geom_col(show.legend = FALSE, alpha = 0.85, color = "black", linewidth = 0.2) +
+  scale_y_reordered() + 
+  facet_wrap(~ level, scales = "free_y", ncol = 3) +
+  theme_minimal(base_size = 16) + # Increased base size for everything
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    title = "Organizational Topography: Departmental Vocabularies",
+    subtitle = "Top 10 words by PMI score, revealing distinct operational language.",
+    x = "Pointwise Mutual Information (Bits)",
+    y = NULL
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 20),
+    plot.subtitle = element_text(size = 14, color = "grey30"),
+    strip.text = element_text(face = "bold", size = 16),
+    # Massively increase the Y-axis word font size
+    axis.text.y = element_text(size = 14, face = "bold", color = "black"),
+    axis.text.x = element_text(size = 12),
+    axis.title.x = element_text(size = 14, face = "bold", margin = margin(t = 10)),
+    panel.grid.major.y = element_blank(), 
+    panel.grid.minor = element_blank()
+  )
+```
+
 # Appendix: R and Python Code
 
 ## Section 1

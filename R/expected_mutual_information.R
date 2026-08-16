@@ -32,11 +32,14 @@ N <- n_distinct(text_data$case_enquiry_id)
 cat("Tokenizing unstructured text (extracting Document Frequency)...\n")
 tokens <- text_data %>%
   unnest_tokens(word, closure_reason) %>%
-  # Remove standard stop words (the, and, is)
   anti_join(get_stopwords(), by = "word") %>%
-  # Remove pure numbers and residual punctuation
-  filter(!str_detect(word, "^[0-9]+$")) %>%
-  # We only care IF a word appears in a ticket, not how many times (Document Frequency)
+  filter(
+    !str_detect(word, "^[0-9]+$"),                # Kills pure numbers
+    !str_detect(word, "^[a-z]+\\.[a-z]+$"),       # Kills names/emails (eric.mcgevna, recovered.jg)
+    !str_detect(word, "^[0-9a-f]{15,}$"),         # Kills massive hex strings/UUIDs
+    !str_detect(word, "^[0-9]+[a-z]{1,2}$"),      # Kills short codes (3dw, 1dt)
+    !str_detect(word, "\\.com$|\\.html$|\\.org$") # Kills domains and web files
+  ) %>%
   distinct(case_enquiry_id, word, .keep_all = TRUE)
 
 # Calculate P(word) and filter out extremely rare noise (min 20 occurrences)

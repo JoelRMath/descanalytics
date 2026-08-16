@@ -30,7 +30,13 @@ N <- n_distinct(text_data$case_enquiry_id)
 tokens <- text_data %>%
   unnest_tokens(word, closure_reason) %>%
   anti_join(get_stopwords(), by = "word") %>%
-  filter(!str_detect(word, "^[0-9]+$")) %>%
+  filter(
+    !str_detect(word, "^[0-9]+$"),                # Kills pure numbers
+    !str_detect(word, "^[a-z]+\\.[a-z]+$"),       # Kills names/emails (eric.mcgevna, recovered.jg)
+    !str_detect(word, "^[0-9a-f]{15,}$"),         # Kills massive hex strings/UUIDs
+    !str_detect(word, "^[0-9]+[a-z]{1,2}$"),      # Kills short codes (3dw, 1dt)
+    !str_detect(word, "\\.com$|\\.html$|\\.org$") # Kills domains and web files
+  ) %>%
   distinct(case_enquiry_id, word, .keep_all = TRUE)
 
 # Calculate global P(w)
@@ -83,3 +89,43 @@ all_pmi_results <- map_dfr(target_factors, ~calculate_pmi_for_factor(.x, tokens,
 
 write_csv(all_pmi_results, here("data", "pmi_results.csv"))
 cat("PMI processing complete. Saved to data/pmi_results.csv\n")
+
+# ==============================================================================
+# 4. Generate Wide CSV for Excel Exploration (All 19 Depts, Top 200 Words)
+# ==============================================================================
+cat("Generating wide-format CSV for Excel exploration...\n")
+
+# Identify ALL 19 departments, ordered by overall ticket volume (n_c)
+all_deps <- all_pmi_results %>%
+  filter(factor == "department") %>%
+  distinct(level, n_c) %>%
+  arrange(desc(n_c)) %>%
+  pull(level)
+
+# Create the wide dataframe (Top 200 words per department)
+department_wide <- all_pmi_results %>%
+  filter(factor == "department") %>%
+  group_by(level) %>%
+  # Rank by PMI first, tie-break by volume
+  arrange(desc(pmi), desc(n_wc)) %>%
+  mutate(rank = row_number()) %>%
+  slice_head(n = 200) %>% 
+  # Create a dummy index strictly for pivot_wider to align the rows
+  mutate(row_id = row_number()) %>% 
+  ungroup() %>%
+  select(row_id, level, word, rank) %>%
+  pivot_wider(
+    id_cols = row_id, 
+    names_from = level,
+    values_from = c(word, rank),
+    names_glue = "{level}_{.value}"
+  ) %>%
+  select(-row_id) 
+
+# Interleave the columns so each department's 'word' and 'rank' are side-by-side
+ordered_cols <- as.vector(rbind(paste0(all_deps, "_word"), paste0(all_deps, "_rank")))
+# Ensure we only select columns that exist (in case a tiny dept has < 200 words)
+department_wide <- department_wide %>% select(any_of(ordered_cols))
+
+write_csv(department_wide, here("data", "department_all19_pmi_excel.csv"))
+cat("Saved wide format to data/department_all19_pmi_excel.csv\n")
