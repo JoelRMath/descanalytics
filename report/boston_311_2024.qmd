@@ -40,7 +40,17 @@ library(tidyr)
 boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 ```
 
-# 1. Goals & Executive Summary: Applied Analytics for Maintenance Operations
+### Reader's Guide
+
+This report is designed to be read modularly based on your interest:
+
+**For a rapid strategic overview**: Read Section 1.
+
+**For a detailed view of the work process**: Read section 2.
+
+**For reproducibility and code**: Refer to the Appendix.
+
+# 1 Goals & Executive Summary: Applied Analytics for Maintenance Operations
 
 ## 1.1 Goals
 
@@ -82,17 +92,17 @@ While this report leverages a municipal dataset, the mathematical framework is p
 
 **Survival Analysis & Regulatory Readiness**: Probabilistic modeling via Kaplan-Meier and Cox Hazards can track the resolution of complex capital repairs versus routine maintenance, ensuring critical safety issues are resolved well before they trigger regulatory scoring deductions (such as inspection breaches).
 
-**Spatial Autocorrelation for Logistical Friction**: Just as municipal infrastructure creates chokepoints, travel time between scattered-site properties introduces massive logistical friction. Spatial analysis mathematically isolates which buildings suffer from delayed service simply due to their geographic isolation from central storage hubs.
+**Spatial Autocorrelation for Logistical Friction**: Just as municipal infrastructure creates chokepoints, travel time between scattered-site properties introduces massive logistical friction. Spatial analysis mathematically isolates which buildings suffer from delayed service maybe due to their geographic locations.
 
 **AI Text Analytics for Asset Lifecycles**: Unsupervised clustering of unstructured tenant work orders can map hidden operational task dependencies, flag behavioral-driven organizational bottlenecks, and preemptively identify systemic asset failures across a portfolio.
 
-Ultimately, applying Data Science—specifically the descriptive and diagnostic analytics branches of Operations Research—to service request databases extracts profound operational intelligence, moving beyond basic dashboards to reveal true workforce capacity and structural bottlenecks.
+Ultimately, applying Data Science—specifically the descriptive and diagnostic analytics branches of Operations Research—to service request databases extracts operational intelligence, moving beyond basic dashboards to reveal true workforce capacity and structural bottlenecks.
 
 However, extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires an iterative, analytical detective work that relies on three core methodological pillars:
 
 **Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
 
-**Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth requires an exploratory analytical process that generalized software cannot fully automate.
+**Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth and the right statistical models to use requires an exploratory analytical process that generalized software cannot fully automate.
 
 **Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
 
@@ -658,70 +668,139 @@ kable(
 )
 ```
 
+@tbl-factor-ranking reveals a distinct structural pattern: factors governing "what the work is and who does it" dominate the top of the list, while factors dictating "where the work is" sit uniformly at the bottom.
+
+To clearly visualize this emergent divide, we group these features into two macro-categories—Organizational & Task Routing versus Geographic Boundaries—and plot their K-S effect sizes in @fig-factor-ranking-lollipop.
+
+```{r}
+#| label: fig-factor-ranking-lollipop
+#| echo: false
+#| warning: false
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Visualizing the K-S Ranking: Organizational variables fundamentally drive SLA variance, while flat geographic boundaries provide minimal predictive signal."
+
+library(ggplot2)
+library(stringr)
+library(forcats)
+
+# Categorize the factors and clean names for the plot
+plot_ks <- ks_results %>%
+  mutate(
+    # Create the macro-categories based on the table's findings
+    Macro_Category = if_else(
+      Factor %in% c("subject", "reason", "type", "queue", "department", "source"),
+      "Organizational & Task Routing", 
+      "Geographic Boundaries"
+    ),
+    # Clean up the factor names for the y-axis
+    Clean_Factor = str_to_title(str_replace_all(Factor, "_", " ")),
+    Clean_Factor = fct_reorder(Clean_Factor, Weighted_KS_Score)
+  )
+
+ggplot(plot_ks, aes(x = Weighted_KS_Score, y = Clean_Factor, color = Macro_Category)) +
+  geom_segment(aes(x = 0, xend = Weighted_KS_Score, y = Clean_Factor, yend = Clean_Factor), linewidth = 1.2) +
+  geom_point(size = 5) +
+  scale_color_manual(values = c("Organizational & Task Routing" = "#d73027", "Geographic Boundaries" = "#4575b4")) +
+  theme_minimal() +
+  labs(
+    title = "What Drives Service Delays?",
+    subtitle = "Organizational routing dominates variance. Geographic bins provide almost no predictive signal.",
+    x = "Weighted K-S Score (Distributional Shift)",
+    y = NULL,
+    color = "Variable Type"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
+```
 
 **Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational. The physical nature of a request and its assigned digital routing queue fundamentally alter its resolution timeline compared to the global baseline.
 
-**Warning: The Geographic Equity *Fallacy**: Spatial features (precinct, ward, location_zipcode, and municipal districts) rank uniformly at the bottom of the K-S results. A common statistical mistake is interpreting this low ranking (a tiny effect size) as proof that geographic equity exists. Because the dataset is massive, the $p$-values for these geographic features are still near zero, mathematically rejecting the null hypothesis. However, having a statistically significant difference is not the same as having an operationally meaningful one.
+**The Limitation of Administrative Boundaries**: Spatial features (precinct, ward, location_zipcode, and municipal districts) cluster uniformly at the bottom of the K-S results. It is critical not to misinterpret this low ranking as proof that geographic equity exists. Ranking at the bottom only proves that slicing data by arbitrary, massive administrative boundaries is a mathematically poor way to measure service delivery. Categorical bins destroy physical topology; they average out street-level disparities, and a dropdown variable possesses no mathematical awareness of its physical neighbors. Accurately measuring true geographic equity requires evaluating continuous spatial relationships, which is explicitly tested via spatial autocorrelation in Section 2.9.
 
-Ranking at the bottom only proves that slicing data by arbitrary administrative boundaries is a poor global predictor of SLA variance. Categorical bins destroy physical topology; a zipcode variable possesses no mathematical awareness of its neighbors. Accurately measuring geographic equity requires evaluating continuous spatial relationships via spatial autocorrelation, which we explicitly test in Section 10.
+### 2.4.3 Result Illustration: Extremes of Organizational Routing
 
-#### Result Illustration with Histograms
+While the K-S statistic is mathematically robust, it is an abstract metric. To directly answer the operational question—"So what?"—we can visually demonstrate exactly how these organizational routing factors dictate the timeline.
 
-While the K-S statistic is mathematically robust against outliers, it is an abstract metric. To ground this finding back, we can look directly at the raw data for one of the highest-scoring factors: queue (D-score = 0.373).
+If organizational factors genuinely drive variance, we should see massive disparities in performance between different digital queues. To test this, we filter for high-volume queues (handling over 500 requests) and contrast the five queues with the earliest median completion times against the five queues with the most delayed median completion times.
 
-By coloring the overall SLA Delta histogram by the top digital queues, we visually validate what the K-S test just measured. The distinct colors do not overlap uniformly; rather, they form separate, distinct operational distributions spanning from early completions to massive late backlogs.
 
 ```{r}
-#| label: fig-queue-histogram
+#| label: fig-variance-extremes
 #| echo: false
 #| warning: false
-#| fig-width: 9
+#| fig-width: 10
 #| fig-height: 7
-#| fig-cap: "SLA Delta Histogram for the top four values of factor 'queue'"
+#| fig-cap: "Contrasting SLA Delta distributions of the fastest and slowest high-volume queues. The digital routing queue strictly dictates whether a task is systematically early or structurally delayed."
 
-# Isolate the top 4 queues to compare against the global background
-top_queues <- sla_delta_data %>%
-  count(queue, sort = TRUE) %>%
-  slice_head(n = 4) %>%
-  pull(queue)
-# Group all remaining data into a global baseline category
-plot_data_queue <- sla_delta_data %>%
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+# 1. Identify the best and worst performing high-volume queues
+queue_summary <- sla_delta_data %>%
+  group_by(queue) %>%
+  summarise(
+    total_tickets = n(),
+    median_delta = median(sla_delta_days, na.rm = TRUE)
+  ) %>%
+  # Isolate only robust, high-volume queues
+  filter(total_tickets > 500)
+
+# Extract the names of the top 5 and bottom 5 queues
+fastest_queues <- queue_summary %>% slice_min(median_delta, n = 5) %>% pull(queue)
+slowest_queues <- queue_summary %>% slice_max(median_delta, n = 5) %>% pull(queue)
+target_queues <- c(fastest_queues, slowest_queues)
+
+# 2. Filter the raw data and categorize for plotting
+plot_data_extremes <- sla_delta_data %>%
+  filter(queue %in% target_queues) %>%
   mutate(
-    queue_grouped = ifelse(queue %in% top_queues, queue, "All Other Queues"),
-    # Convert to factor and put "All Other Queues" first so it renders at the bottom of the stack
-    queue_grouped = factor(queue_grouped, levels = c("All Other Queues", top_queues))
+    Performance = if_else(queue %in% fastest_queues, "Systematically Early", "Systematically Delayed"),
+    # Reorder the factor based on median delay for a clean visual staircase
+    queue = fct_reorder(queue, sla_delta_days, .fun = median, na.rm = TRUE)
   )
-# Generate the stacked histogram
-ggplot(plot_data_queue, aes(x = sla_delta_days, fill = queue_grouped)) +
-  geom_histogram(binwidth = 1, boundary = 0, position = "stack", color = "white", linewidth = 0.2, alpha = 0.9) +
-  # Add the SLA deadline reference line
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 1) +
-  # Zoom tightly to the central mass for higher resolution
-  coord_cartesian(xlim = c(-15, 15)) +
-  # Manually assign colors: neutral grey for the baseline, vibrant colors for the top 4
-  scale_fill_manual(
-    values = c(
-      "All Other Queues" = "grey80",
-      setNames(c("#E41A1C", "#377EB8", "#4DAF4A", "#FF7F00"), top_queues)
-    )
-  ) +
+
+# Calculate dynamic axis limits to ensure all boxes fit (ignoring extreme 5% outliers)
+x_lower <- quantile(plot_data_extremes$sla_delta_days, 0.05, na.rm = TRUE)
+x_upper <- quantile(plot_data_extremes$sla_delta_days, 0.95, na.rm = TRUE)
+
+# 3. Generate the Boxplot
+ggplot(plot_data_extremes, aes(x = sla_delta_days, y = queue, fill = Performance)) +
+  # Suppress severe outliers, thicken whiskers (linewidth), and pop the median (fatten)
+  geom_boxplot(alpha = 0.8, outlier.alpha = 0.05, outlier.size = 0.5, 
+               color = "black", linewidth = 0.6, fatten = 3) +
+  # Reference line for the exact deadline
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 1.2) +
+  # Use the dynamically calculated limits instead of hardcoded numbers
+  coord_cartesian(xlim = c(x_lower, x_upper)) +
+  scale_fill_manual(values = c("Systematically Early" = "#4575b4", "Systematically Delayed" = "#d73027")) +
   theme_minimal() +
   labs(
-    title = "SLA Delta Histogram by Top Queues",
-    subtitle = "Visualizing the K-S finding: Top queues form distinct distributions against the global baseline.",
+    title = "The Operational Divide: Best vs. Worst Queues",
+    subtitle = "Visualizing the K-S finding: The assigned digital queue dictates massive timeline variance.",
     x = "SLA Delta (Days)",
-    y = "Volume of Work Orders",
-    fill = "Digital Queue"
+    y = NULL,
+    fill = "Queue Performance"
   ) +
   theme(
-    # Move legend to the bottom to allow more horizontal breathing room
-    legend.position = "bottom",
+    plot.title = element_text(size = 16, face = "bold"),
+    legend.position = "top",
     legend.title = element_text(face = "bold"),
-    legend.text = element_text(size = 9)
-  ) +
-  # Force the legend to wrap into 2 columns so long department names are never cut off
-  guides(fill = guide_legend(ncol = 2, reverse = TRUE))
+    axis.text.y = element_text(size = 10, face = "bold")
+  )
 ```
+
+As @fig-variance-extremes demonstrates, the digital routing queue is not merely an administrative tag; it fundamentally dictates the lifecycle of a request.
+
+The blue queues, such as rapid triage or simple administrative checks, consistently close days ahead of their scheduled deadlines with incredibly tight variance. Conversely, the red queues, representing complex or disputed workflows, suffer from massive structural delays. The middle 50% of the work in these delayed queues completely entirely falls on the right side of the deadline.
+
+This visualization grounds the K-S test in reality: organizational routing is a massive driver of SLA timeline variance. Having exhausted the limits of these flat categorical variables, our diagnostic now pivots to an entirely different dimension of the dataset: unstructured free text. The next section explores the raw notes left by technicians to determine if additional operational signals can be extracted from outside the predefined administrative bins.
+
 
 ## 2.5 Text Analytics: Extracting Operational Signals from Unstructured Data
 
@@ -1511,6 +1590,123 @@ Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicatin
 :::
 
 
+The Target Variable:
+
+closure_reason (239,102 levels): The unstructured free-text field. This is the dependent target variable that will be tokenized into n-grams for probability distribution modeling.
+
+Retained Analytical Factors (Independent Variables)
+
+```{r}
+#| label: tbl-retained-factors
+#| tbl-cap: "Retained Analytical Factors (Independent Variables)"
+#| echo: false
+#| warning: false
+
+library(tibble)
+library(knitr)
+
+retained_factors <- tribble(
+  ~`Categorical Factor`, ~`Unique Levels`, ~`Analytical Purpose`,
+  "`source`", "6", "Evaluates if constituent intake channels (e.g., App vs. Call Center) generate distinct linguistic patterns.",
+  "`subject`", "10", "The highest-level macro-routing bucket.",
+  "`department`", "19", "Maps the core operational vocabulary of distinct municipal workforces.",
+  "`neighborhood`", "24", "Retained as a control factor to test if vocabulary changes geographically.",
+  "`reason`", "45", "Mid-level operational classification.",
+  "`type`", "173", "High-granularity operational classification.",
+  "`queue`", "187", "The exact digital routing destination. Expected to yield the highest-fidelity PMI signals."
+)
+
+kable(retained_factors, align = c('l', 'c', 'l'))
+```
+
+Excluded Variables & Justification
+
+```{r}
+#| label: tbl-excluded-factors
+#| tbl-cap: "Excluded Variables & Justification"
+#| echo: false
+#| warning: false
+
+library(tibble)
+library(knitr)
+
+excluded_factors <- tribble(
+  ~`Excluded Variable`, ~`Levels`, ~`Primary Justification for Exclusion`,
+  "`submitted_photo`", "1", "**Zero Variance.** Cannot be used to calculate a probability distribution.",
+  "`on_time`, `case_status`", "2", "**Target Leakage / Scope.** We are mapping organizational topology, not SLA compliance metrics.",
+  "`case_title`", "3,753", "**Secondary Text.** Functions as a free-text field rather than a categorical grouping structure.",
+  "`precinct`, `ward`, `location_zipcode`, etc.", "37 - 255", "**Geographic Redundancy.** `neighborhood` is retained as the geographic control; finer administrative bins fracture the baseline probabilities ($P(category) \\approx 0$).",
+  "`case_enquiry_id`, `location_street_name`, `geom_4326`, `location`", "73K - 282K", "**Hyper-Granular Identifiers.** Unique row identifiers and precise coordinates fragment the denominator, causing the MI log-ratio to explode into statistical noise.",
+  "`open_dt`, `closed_dt`, `sla_target_dt`, `longitude`, `latitude`", "Continuous", "**Continuous Time & Space.** Cannot be passed into categorical mutual information models without arbitrary temporal or spatial binning."
+)
+
+kable(excluded_factors, align = c('l', 'c', 'l'))
+```
+
+```{r}
+#| label: fig-emi-distribution
+#| echo: false
+#| warning: false
+#| fig-width: 12
+#| fig-height: 10
+#| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean Expected MI."
+
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(readr)
+
+mi_results <- read_csv("../data/mi_results.csv", show_col_types = FALSE)
+
+# 1. Calculate mean Expected MI per factor to establish a decreasing sort order
+factor_ranking <- mi_results %>%
+  group_by(factor) %>%
+  summarise(mean_emi = mean(expected_mi, na.rm = TRUE)) %>%
+  arrange(desc(mean_emi)) %>%
+  pull(factor)
+
+# 2. Create the "Global" summary pseudo-factor (Max EMI across all factors for each word)
+global_mi <- mi_results %>%
+  group_by(word) %>%
+  summarise(expected_mi = max(expected_mi, na.rm = TRUE)) %>%
+  mutate(factor = "Global (Max EMI)")
+
+# 3. Combine data and set factor levels: Global first, followed by factors ordered by mean EMI
+plot_data <- bind_rows(global_mi, mi_results) %>%
+  mutate(factor = factor(factor, levels = c("Global (Max EMI)", factor_ranking)))
+
+# 4. Generate the 4x2 faceted plot
+ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
+  geom_histogram(bins = 60, color = "black", linewidth = 0.2, alpha = 0.8) +
+  facet_wrap(~ factor, scales = "free_y", ncol = 2) +
+  # Log-transform the X-axis to spread out the dense region near zero
+  scale_x_continuous(
+    trans = "log1p",
+    breaks = c(0, 0.01, 0.05, 0.1, 0.2),
+    labels = scales::label_number(accuracy = 0.01)
+  ) +
+  # Log-transform the Y-axis counts
+  scale_y_log10(
+    labels = scales::comma,
+    breaks = c(1, 10, 100, 1000, 10000)
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "The Signal Filter: Expected Mutual Information Distribution",
+    subtitle = "Factors ordered by decreasing mean Expected MI, highlighting structural information density.",
+    x = "Expected Mutual Information (log1p bits)",
+    y = "Number of Words (log scale)",
+    fill = "Factor"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "none",
+    panel.grid.minor = element_blank()
+  )
+```
 # Appendix: R and Python Code
 
 ## Section 1
