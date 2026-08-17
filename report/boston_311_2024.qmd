@@ -5,7 +5,7 @@ date: today
 format:
   html:
     toc: true
-    toc-depth: 3
+    toc-depth: 4
     toc-location: left
     theme: cosmo
     math: true
@@ -15,6 +15,10 @@ bibliography: references.bib
 nocite: |
   @*
 ---
+
+<style>
+  h4 { font-weight: bold !important; }
+</style>
 
 ```{r}
 #| label: setup
@@ -810,6 +814,8 @@ The first NLP approach we use relies on an unsupervised machine learning pipelin
 
 ### 2.5.1 Unsupervised Classification via Deep Learning
 
+#### 2.5.1.1 Clustering
+
 To categorize the raw text, we deployed a locally hosted deep learning pipeline. We utilized BERTopic [@grootendorst2022] combined with a Hugging Face embedding model built on the sentence-transformers architecture [@reimers2019] to group the closure notes into distinct sets. The background scripts convert unstructured text into high-dimensional numerical embeddings, which are then clustered via the HDBSCAN algorithm [@mcinnes2017hdbscan].
 
 Because of the heavy computational weight of Transformer models, this initial Python classification script was executed asynchronously. The results were saved to a static dataset, ensuring the compilation of this report remains lightweight.
@@ -864,7 +870,7 @@ ggplot(ai_plot_data, aes(x = n, y = reorder(clean_topic, n))) +
   )
 ```
 
-### 2.5.2 Refining Labels with Local Generative AI (Ollama)
+#### 2.5.1.2 Refining Labels with Local Generative AI (Ollama)
 
 While the initial pipeline successfully groups the data using mathematical c-TF-IDF keyword strings (e.g., "Related Responds Patrols Encourage"), these raw statistical labels lack human context and readability.
 
@@ -978,7 +984,7 @@ ggplot(ai_plot_data_translated, aes(x = n, y = reorder(final_label, n))) +
   )
 ```
 
-### 2.5.3 Departmental Topic Enrichment
+#### 2.5.1.3 Departmental Topic Enrichment
 
 Now equipped with clean, AI-generated operational labels, we can mathematically test how these unsupervised clusters map to actual municipal departments.
 
@@ -1047,6 +1053,222 @@ ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
 ```
 
 The results demonstrate clear organizational clustering: "Tree Pruning Operations" is intensely concentrated within the Parks Department (PARK), while "Cart Maintenance" heavily dominates Public Works (PWDX). Additionally, "Customer Feedback" shows a strong operational enrichment within the Mayor's Hotline (INFO). These highly localized, deep-red signals confirm that the unsupervised NLP pipeline successfully extracted distinct, department-specific operational themes directly from the unstructured closure notes.
+
+### 2.5.2 Structural Vocabulary Extraction
+
+While deep learning and topic modeling provided unsupervised insights, municipal data is inherently structured around strict organizational categories (e.g., Departments, Queues, Neighborhoods). To map the specific vocabulary associated with these categories, we implemented an information-theoretic pipeline.
+
+#### 2.5.2.1 The EMI and PMI Mathematical Framework
+
+**Overcoming the Context Limit via Semantic Compression**
+
+While Generative AI excels at synthesizing text, feeding the entirety of a category's work history (often exceeding 50,000 raw tickets) into a Large Language Model is computationally prohibitive and exceeds standard context windows. Conversely, relying on a random sample of tickets creates severe representational bias: high-volume, repetitive tasks (e.g., daily trash removal) will naturally crowd out highly specialized, lower-volume technical work (e.g., electrical infrastructure), yielding an incomplete vocabulary profile.
+
+To solve this, we utilize Expected and Pointwise Mutual Information (EMI/PMI) as a deterministic text compression algorithm. Rather than sampling raw tickets, we mathematically transform the unstructured closure notes into a concentrated array of high-signal tokens, isolating the structural vocabulary of a category.
+
+**Expected Mutual Information (EMI)**
+
+Before evaluating category-specific vocabulary, we first filter out global administrative noise. Words like "completed," "resident," or "arrived" appear frequently across all categories, offering no structural signal. To identify and remove these words, we calculate the Expected Mutual Information (EMI), which aggregates a specific word's ($w$) probability distribution across all possible categories ($c \in C$) to measure its total informational value:
+$$EMI(w) = \sum_{c \in C} P(c \vert{} w) \cdot \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
+Words yielding $EMI \le 0$ provide zero structural information and were removed from the global vocabulary. This mathematical filtering reduces a large, noisy universe of free text down to a core vocabulary of specific operational terms.
+
+**Pointwise Mutual Information (PMI)**
+
+After isolating the high-signal vocabulary, we utilize Pointwise Mutual Information (PMI) to measure the specific association between a single word ($w$) and a specific category ($c$). It compares the probability of the word and the category occurring together against the probability of them occurring independently:
+$$PMI(w, c) = \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
+
+* $PMI > 0$: The word appears in this category more often than random chance (Attraction).
+
+* $PMI = 0$: The word's appearance in this category is completely random (Independence).
+
+* $PMI < 0$: The word appears less often than random chance (Repulsion).
+
+In summary, the raw text is first reduced to high-signal words via EMI, and PMI is utilized next to isolate the vocabulary strictly associated with a specific category. This dual-step approach is applied below to the `department` factor, evaluating its $|C|=19$ distinct organizational categories.
+
+#### Categorical Feature Selection
+
+Before executing the Information Theory algorithms, the dataset's categorical variables had to be evaluated to remove variables with too few levels (target leakage) or too many levels (hyper-granularity).
+
+The tables below detail the inclusion and exclusion criteria applied to define the categorical set ($C$) for the EMI pipeline.
+
+```{r}
+#| label: tbl-retained-factors
+#| tbl-cap: "Retained Analytical Factors (Independent Variables)"
+#| echo: false
+#| warning: false
+
+library(tibble)
+library(knitr)
+
+retained_factors <- tribble(
+  ~`Categorical Factor`, ~`Unique Levels`, ~`Analytical Purpose`,
+  "`source`", "6", "Evaluates if constituent intake channels (e.g., App vs. Call Center) generate distinct linguistic patterns.",
+  "`subject`", "10", "The highest-level macro-routing bucket.",
+  "`department`", "19", "Maps the core operational vocabulary of distinct municipal workforces.",
+  "`neighborhood`", "24", "Retained as a control factor to test if vocabulary changes geographically.",
+  "`reason`", "45", "Mid-level operational classification.",
+  "`type`", "173", "High-granularity operational classification.",
+  "`queue`", "187", "The exact digital routing destination. Expected to yield the highest-fidelity PMI signals."
+)
+
+kable(retained_factors, align = c('l', 'c', 'l'))
+```
+
+```{r}
+#| label: tbl-excluded-factors
+#| tbl-cap: "Excluded Variables & Justification"
+#| echo: false
+#| warning: false
+
+library(tibble)
+library(knitr)
+
+excluded_factors <- tribble(
+  ~`Excluded Variable`, ~`Levels`, ~`Primary Justification for Exclusion`,
+  "`submitted_photo`", "1", "**Zero Variance.** Cannot be used to calculate a probability distribution.",
+  "`on_time`, `case_status`", "2", "**Target Leakage / Scope.** We are mapping organizational topology, not SLA compliance metrics.",
+  "`case_title`", "3,753", "**Secondary Text.** Functions as a free-text field rather than a categorical grouping structure.",
+  "`precinct`, `ward`, `location_zipcode`", "37 - 255", "**Geographic Redundancy.** `neighborhood` is retained as the geographic control; finer administrative bins fracture the baseline probabilities.",
+  "`case_enquiry_id`, `location_street_name`, `geom_4326`, `location`", "73K - 282K", "**Hyper-Granular Identifiers.** Unique row identifiers and precise coordinates fragment the denominator, causing the MI log-ratio to explode into statistical noise.",
+  "`open_dt`, `closed_dt`, `sla_target_dt`, `longitude`, `latitude`", "Continuous", "**Continuous Time & Space.** Cannot be passed into categorical mutual information models without arbitrary temporal or spatial binning."
+)
+
+kable(excluded_factors, align = c('l', 'c', 'l'))
+```
+
+
+```{r}
+#| label: workflow-pmi-tracking
+#| eval: false
+#| echo: false
+# ==============================================================================
+# Workflow Tracking: 
+# The vocabulary data displayed below is generated by the following scripts:
+source("../R/expected_mutual_information.R") # (Global vocabulary filtering)
+source("../R/pointwise_mutual_information.R") # (Department-specific PMI mapping)
+# (A visible version of this chunk is included in the Appendix)
+# ==============================================================================
+```
+
+```{r}
+#| label: fig-emi-distribution
+#| echo: false
+#| warning: false
+#| fig-width: 12
+#| fig-height: 10
+#| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean EMI."
+
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(readr)
+
+mi_results <- read_csv("../data/mi_results.csv", show_col_types = FALSE)
+
+# 1. Calculate mean Expected MI per factor to establish a decreasing sort order
+factor_ranking <- mi_results %>%
+  group_by(factor) %>%
+  summarise(mean_emi = mean(expected_mi, na.rm = TRUE)) %>%
+  arrange(desc(mean_emi)) %>%
+  pull(factor)
+
+# 2. Create the "Global" summary pseudo-factor (Max EMI across all factors for each word)
+global_mi <- mi_results %>%
+  group_by(word) %>%
+  summarise(expected_mi = max(expected_mi, na.rm = TRUE)) %>%
+  mutate(factor = "Global (Max EMI)")
+
+# 3. Combine data and set factor levels: Global first, followed by factors ordered by mean EMI
+plot_data <- bind_rows(global_mi, mi_results) %>%
+  mutate(factor = factor(factor, levels = c("Global (Max EMI)", factor_ranking)))
+
+# 4. Generate the 4x2 faceted plot
+ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
+  geom_histogram(bins = 60, color = "black", linewidth = 0.2, alpha = 0.8) +
+  facet_wrap(~ factor, scales = "free_y", ncol = 2) +
+  # Log-transform the X-axis to spread out the dense region near zero
+  scale_x_continuous(
+    trans = "log1p",
+    breaks = c(0, 0.01, 0.05, 0.1, 0.2),
+    labels = scales::label_number(accuracy = 0.01)
+  ) +
+  # Log-transform the Y-axis counts
+  scale_y_log10(
+    labels = scales::comma,
+    breaks = c(1, 10, 100, 1000, 10000)
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "The Signal Filter: Expected Mutual Information Distribution",
+    subtitle = "Factors ordered by decreasing mean Expected MI, highlighting structural information density.",
+    x = "Expected Mutual Information (log1p bits)",
+    y = "Number of Words (log scale)",
+    fill = "Factor"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "none",
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+#### 2.5.2.3 Global Signal Detection & Functional Alignment
+
+With the structural categories defined, we applied the Expected Mutual Information (EMI) equation globally. The resulting distribution (@fig-emi-distribution) mathematically validates the text compression strategy. Plotted on a logarithmic scale, the massive density near zero indicates that the vast majority of tokens are administrative noise distributed evenly across all categories. However, the long right tail represents the surviving structural vocabulary that passed the $EMI > 0$ threshold with high information scores.
+
+Furthermore, the ranking of these factors by mean EMI exposes a critical structural reality about municipal operations: **the alignment of vocabulary and completion time**.
+
+Indeed, notice that the factors with the highest information density (`queue`, `type`, `reason`, `department`) are strictly functional. They dictate exactly *what* the physical task is and *who* is assigned to it. Because the nature of the task dictates the required tools and statuses, it tightly controls the *technician's vocabulary*. Conversely, circumstantial variables like `neighborhood` and `source` do not alter the physical reality of the work, yielding a much lower semantic footprint.
+
+This perfectly triangulates with the SLA variance findings established via K-S testing in Section 2.4. The functional factor levels (e.g., a specific department) that dictate the complexity of the physical work—and thereby drive the SLA timeline—are the same levels that dictate the operational vocabulary.
+
+#### 2.5.2.4 High-Signal Vocabulary by Department
+
+By executing the information-theoretic pipeline across the 19 distinct departments, we extracted the top 200 most significant words for each organizational branch.
+
+The interactive table below displays these semantic anchors, ranked sequentially by their Pointwise Mutual Information (PMI) score. Words appearing at the top of a department's column are highly exclusive to that specific workforce, revealin the physical tasks, equipment, and administrative shorthand that define their daily operations.
+
+```{r}
+#| label: tbl-pmi-departments
+#| echo: false
+#| warning: false
+#| message: false
+
+library(readr)
+library(dplyr)
+library(DT)
+
+# Load the wide-format PMI data
+pmi_wide <- read_csv("../data/department_all19_pmi_excel.csv", show_col_types = FALSE)
+
+# Clean the dataframe for HTML display
+pmi_display <- pmi_wide %>%
+  select(ends_with("_word")) %>%
+  rename_with(~ sub("_word$", "", .x)) %>%
+  # Engineer an explicit Rank column and place it at the far left
+  mutate(Rank = row_number(), .before = 1)
+
+# Generate the interactive DataTable
+datatable(
+  pmi_display,
+  rownames = FALSE, # Turn off default row names to avoid the blank header bug
+  class = 'display compact', 
+  caption = "Top 200 Operational Words by Department (Ranked by PMI, Tie-broken by Volume)",
+  options = list(
+    pageLength = 20,       
+    scrollX = TRUE,        
+    scrollY = "570px",     
+    dom = 'ftip',          
+    searchHighlight = TRUE 
+  )
+) %>%
+  # Apply 12px font to all named columns
+  formatStyle(columns = names(pmi_display), fontSize = '13px')
+```
 
 ## 2.6 Seasonal Demand and System Capacity
 
@@ -1590,178 +1812,8 @@ Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicatin
 :::
 
 
-The Target Variable:
 
-closure_reason (239,102 levels): The unstructured free-text field. This is the dependent target variable that will be tokenized into n-grams for probability distribution modeling.
 
-Retained Analytical Factors (Independent Variables)
-
-```{r}
-#| label: tbl-retained-factors
-#| tbl-cap: "Retained Analytical Factors (Independent Variables)"
-#| echo: false
-#| warning: false
-
-library(tibble)
-library(knitr)
-
-retained_factors <- tribble(
-  ~`Categorical Factor`, ~`Unique Levels`, ~`Analytical Purpose`,
-  "`source`", "6", "Evaluates if constituent intake channels (e.g., App vs. Call Center) generate distinct linguistic patterns.",
-  "`subject`", "10", "The highest-level macro-routing bucket.",
-  "`department`", "19", "Maps the core operational vocabulary of distinct municipal workforces.",
-  "`neighborhood`", "24", "Retained as a control factor to test if vocabulary changes geographically.",
-  "`reason`", "45", "Mid-level operational classification.",
-  "`type`", "173", "High-granularity operational classification.",
-  "`queue`", "187", "The exact digital routing destination. Expected to yield the highest-fidelity PMI signals."
-)
-
-kable(retained_factors, align = c('l', 'c', 'l'))
-```
-
-Excluded Variables & Justification
-
-```{r}
-#| label: tbl-excluded-factors
-#| tbl-cap: "Excluded Variables & Justification"
-#| echo: false
-#| warning: false
-
-library(tibble)
-library(knitr)
-
-excluded_factors <- tribble(
-  ~`Excluded Variable`, ~`Levels`, ~`Primary Justification for Exclusion`,
-  "`submitted_photo`", "1", "**Zero Variance.** Cannot be used to calculate a probability distribution.",
-  "`on_time`, `case_status`", "2", "**Target Leakage / Scope.** We are mapping organizational topology, not SLA compliance metrics.",
-  "`case_title`", "3,753", "**Secondary Text.** Functions as a free-text field rather than a categorical grouping structure.",
-  "`precinct`, `ward`, `location_zipcode`, etc.", "37 - 255", "**Geographic Redundancy.** `neighborhood` is retained as the geographic control; finer administrative bins fracture the baseline probabilities ($P(category) \\approx 0$).",
-  "`case_enquiry_id`, `location_street_name`, `geom_4326`, `location`", "73K - 282K", "**Hyper-Granular Identifiers.** Unique row identifiers and precise coordinates fragment the denominator, causing the MI log-ratio to explode into statistical noise.",
-  "`open_dt`, `closed_dt`, `sla_target_dt`, `longitude`, `latitude`", "Continuous", "**Continuous Time & Space.** Cannot be passed into categorical mutual information models without arbitrary temporal or spatial binning."
-)
-
-kable(excluded_factors, align = c('l', 'c', 'l'))
-```
-
-```{r}
-#| label: fig-emi-distribution
-#| echo: false
-#| warning: false
-#| fig-width: 12
-#| fig-height: 10
-#| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean EMI."
-
-library(ggplot2)
-library(dplyr)
-library(scales)
-library(readr)
-
-mi_results <- read_csv("../data/mi_results.csv", show_col_types = FALSE)
-
-# 1. Calculate mean Expected MI per factor to establish a decreasing sort order
-factor_ranking <- mi_results %>%
-  group_by(factor) %>%
-  summarise(mean_emi = mean(expected_mi, na.rm = TRUE)) %>%
-  arrange(desc(mean_emi)) %>%
-  pull(factor)
-
-# 2. Create the "Global" summary pseudo-factor (Max EMI across all factors for each word)
-global_mi <- mi_results %>%
-  group_by(word) %>%
-  summarise(expected_mi = max(expected_mi, na.rm = TRUE)) %>%
-  mutate(factor = "Global (Max EMI)")
-
-# 3. Combine data and set factor levels: Global first, followed by factors ordered by mean EMI
-plot_data <- bind_rows(global_mi, mi_results) %>%
-  mutate(factor = factor(factor, levels = c("Global (Max EMI)", factor_ranking)))
-
-# 4. Generate the 4x2 faceted plot
-ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
-  geom_histogram(bins = 60, color = "black", linewidth = 0.2, alpha = 0.8) +
-  facet_wrap(~ factor, scales = "free_y", ncol = 2) +
-  # Log-transform the X-axis to spread out the dense region near zero
-  scale_x_continuous(
-    trans = "log1p",
-    breaks = c(0, 0.01, 0.05, 0.1, 0.2),
-    labels = scales::label_number(accuracy = 0.01)
-  ) +
-  # Log-transform the Y-axis counts
-  scale_y_log10(
-    labels = scales::comma,
-    breaks = c(1, 10, 100, 1000, 10000)
-  ) +
-  theme_minimal(base_size = 13) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "The Signal Filter: Expected Mutual Information Distribution",
-    subtitle = "Factors ordered by decreasing mean Expected MI, highlighting structural information density.",
-    x = "Expected Mutual Information (log1p bits)",
-    y = "Number of Words (log scale)",
-    fill = "Factor"
-  ) +
-  theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 11, color = "grey30"),
-    strip.text = element_text(face = "bold", size = 11),
-    legend.position = "none",
-    panel.grid.minor = element_blank()
-  )
-```
-
-```{r}
-#| label: fig-pmi-departments
-#| echo: false
-#| warning: false
-#| fig-width: 12
-#| fig-height: 8
-#| fig-cap: "The Semantic Footprint of Municipal Departments: Top 10 words uniquely tethered to six distinct city departments. Ranked by PMI, with perfect-exclusivity ties broken by word volume."
-
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(tidytext)
-
-pmi_results <- read_csv("../data/pmi_results.csv", show_col_types = FALSE)
-
-target_departments <- c("BPD_", "PARK", "PWDx", "ISD_", "INFO", "BTDT")
-
-# 1. Filter, rank, and break ties with volume
-plot_data_pmi <- pmi_results %>%
-  filter(factor == "department", level %in% target_departments) %>%
-  group_by(level) %>%
-  # Sort by PMI first. If perfectly tied (100% exclusive), sort by highest volume
-  arrange(desc(pmi), desc(n_wc)) %>%
-  slice_head(n = 10) %>%
-  ungroup() %>%
-  # Add a tiny fraction of n_wc to PMI just for reorder_within, 
-  # so perfectly tied bars are sorted visually by volume on the Y-axis
-  mutate(word = reorder_within(word, pmi + (n_wc/1000000), level))
-
-# 2. Generate the visual table with scaled-up fonts
-ggplot(plot_data_pmi, aes(x = pmi, y = word, fill = level)) +
-  geom_col(show.legend = FALSE, alpha = 0.85, color = "black", linewidth = 0.2) +
-  scale_y_reordered() + 
-  facet_wrap(~ level, scales = "free_y", ncol = 3) +
-  theme_minimal(base_size = 16) + # Increased base size for everything
-  scale_fill_brewer(palette = "Dark2") +
-  labs(
-    title = "Organizational Topography: Departmental Vocabularies",
-    subtitle = "Top 10 words by PMI score, revealing distinct operational language.",
-    x = "Pointwise Mutual Information (Bits)",
-    y = NULL
-  ) +
-  theme(
-    plot.title = element_text(face = "bold", size = 20),
-    plot.subtitle = element_text(size = 14, color = "grey30"),
-    strip.text = element_text(face = "bold", size = 16),
-    # Massively increase the Y-axis word font size
-    axis.text.y = element_text(size = 14, face = "bold", color = "black"),
-    axis.text.x = element_text(size = 12),
-    axis.title.x = element_text(size = 14, face = "bold", margin = margin(t = 10)),
-    panel.grid.major.y = element_blank(), 
-    panel.grid.minor = element_blank()
-  )
-```
 
 # Appendix: R and Python Code
 
