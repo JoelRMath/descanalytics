@@ -1085,7 +1085,7 @@ $$PMI(w, c) = \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
 
 In summary, the raw text is first reduced to high-signal words via EMI, and PMI is utilized next to isolate the vocabulary strictly associated with a specific category. This dual-step approach is applied below to the `department` factor, evaluating its $|C|=19$ distinct organizational categories.
 
-#### Categorical Feature Selection
+#### 2.5.2.2 Categorical Feature Selection
 
 Before executing the Information Theory algorithms, the dataset's categorical variables had to be evaluated to remove variables with too few levels (target leakage) or too many levels (hyper-granularity).
 
@@ -1216,7 +1216,7 @@ ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
 ```
 
 
-#### 2.5.2.3 Global Signal Detection & Functional Alignment
+#### 2.5.2.3 Global Signal & Functional Alignment
 
 With the structural categories defined, we applied the Expected Mutual Information (EMI) equation globally. The resulting distribution (@fig-emi-distribution) mathematically validates the text compression strategy. Plotted on a logarithmic scale, the massive density near zero indicates that the vast majority of tokens are administrative noise distributed evenly across all categories. However, the long right tail represents the surviving structural vocabulary that passed the $EMI > 0$ threshold with high information scores.
 
@@ -1241,6 +1241,25 @@ The interactive table below displays these semantic anchors, ranked sequentially
 library(readr)
 library(dplyr)
 library(DT)
+library(tibble)
+
+# 1. Map short codes to full department names
+dept_mapping <- tribble(
+  ~code, ~full_name,
+  "PWDx", "Public Works",
+  "BTDT", "Transportation",
+  "PARK", "Parks and Recreation",
+  "ISD", "Inspectional Services",
+  "GEN_", "General / 311",
+  "BWSC", "Water and Sewer",
+  "INFO", "Info / Hotline",
+  "ANML", "Animal Control",
+  "PROP", "Property Management",
+  "BPD_", "Police Department",
+  "DISB", "Disabilities Commission",
+  "DND_", "Neighborhood Development",
+  "ONS_", "Neighborhood Services"
+)
 
 # Load the wide-format PMI data
 pmi_wide <- read_csv("../data/department_all19_pmi_excel.csv", show_col_types = FALSE)
@@ -1248,27 +1267,105 @@ pmi_wide <- read_csv("../data/department_all19_pmi_excel.csv", show_col_types = 
 # Clean the dataframe for HTML display
 pmi_display <- pmi_wide %>%
   select(ends_with("_word")) %>%
-  rename_with(~ sub("_word$", "", .x)) %>%
-  # Engineer an explicit Rank column and place it at the far left
-  mutate(Rank = row_number(), .before = 1)
+  rename_with(~ sub("_word$", "", .x))
+
+# Rename the columns to include full names based on the mapping
+new_col_names <- sapply(names(pmi_display), function(col) {
+  full_name <- dept_mapping$full_name[dept_mapping$code == col]
+  if (length(full_name) > 0) paste0(col, " (", full_name, ")") else col
+})
+names(pmi_display) <- new_col_names
+
+pmi_display <- pmi_display %>% mutate(Rank = row_number(), .before = 1)
 
 # Generate the interactive DataTable
 datatable(
   pmi_display,
-  rownames = FALSE, # Turn off default row names to avoid the blank header bug
+  rownames = FALSE, 
   class = 'display compact', 
   caption = "Top 200 Operational Words by Department (Ranked by PMI, Tie-broken by Volume)",
   options = list(
     pageLength = 20,       
     scrollX = TRUE,        
-    scrollY = "570px",     
+    scrollY = "580px",     
     dom = 'ftip',          
     searchHighlight = TRUE 
   )
 ) %>%
-  # Apply 12px font to all named columns
   formatStyle(columns = names(pmi_display), fontSize = '13px')
 ```
+
+#### 2.5.2.5 Vocabulary Interpretation via Local Generative AI
+
+To provide an easily readable view of the statistically extracted vocabulary, we added a local Large Language Model (LLM) to the pipeline.
+
+The LLM was not used to read the raw operational tickets—an approach that often struggles with context window limitations and noise. Instead, the LLM was only fed the top 200 high-signal words extracted by the PMI algorithm, anf we forced the AI to act strictly as a semantic translator. The LLM was provided with the baseline context that it was evaluating a municipal workforce:
+
+> **Prompt** "You are a municipal operations analyst. I am providing you with a list of the top statistically significant words extracted from the 'closure notes' of a specific city department, sorted by their Pointwise Mutual Information (PMI) score. This means these words represent the highly specific, unique physical tasks and vocabulary of this department.
+Based only on these words, write a concise, 3-sentence operational profile describing exactly what this department does in the physical world. Do not invent tasks outside of this vocabulary." 
+
+Descriptions provided by the LLM are presented in @tbl-llm-profiles.
+
+> **Note**: The Boston Police Department (BPD) profile generated below relies heavily on words related to noise and public disturbances. This is because the 311 system is explicitly reserved for non-emergency municipal issues; active crimes are routed through 911 and therefore do not appear in this dataset's vocabulary.
+
+
+
+```{r}
+#| label: tbl-llm-profiles
+#| tbl-cap: "Generative Translation of PMI Vocabulary Arrays into Operational Profiles"
+#| echo: false
+#| warning: false
+#| message: false
+
+library(readr)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(tibble)
+
+# 1. Map short codes to full department names
+dept_mapping <- tribble(
+  ~code, ~full_name,
+  "PWDx", "Public Works",
+  "BTDT", "Transportation",
+  "PARK", "Parks and Recreation",
+  "ISD", "Inspectional Services",
+  "GEN_", "General / 311",
+  "BWSC", "Water and Sewer",
+  "INFO", "Info / Hotline",
+  "ANML", "Animal Control",
+  "PROP", "Property Management",
+  "BPD_", "Police Department",
+  "DISB", "Disabilities Commission",
+  "DND_", "Neighborhood Development",
+  "ONS_", "Neighborhood Services"
+)
+
+# Load the LLM-generated profiles
+llm_profiles <- read_csv("../data/department_profiles_llm.csv", show_col_types = FALSE)
+
+# Clean and format for display
+display_profiles <- llm_profiles %>%
+  # Filter out small departments that lacked sufficient vocabulary for a profile
+  filter(!grepl("Insufficient vocabulary", operational_profile, ignore.case = TRUE)) %>%
+  # Join full names
+  left_join(dept_mapping, by = c("department" = "code")) %>%
+  # Format the Department column to stack the code and the full name
+  mutate(
+    Department = paste0("<b>", department, "</b><br><span style='font-size:0.85em; color:gray;'>", full_name, "</span>")
+  ) %>%
+  select(Department, `AI-Translated Operational Profile` = operational_profile)
+
+# Render a styled HTML table with strict column widths to enforce text wrapping
+kable(display_profiles, format = "html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
+  column_spec(1, width = "20%") %>%
+  column_spec(2, width = "80%")
+```
+
+Based on the relatively small number of words extracted with the EMI/PMI approach, the LLM provides an accurate and highly targeted description of each department's operational footprint.
+
+The EMI/PMI/LLM pipeline utilized above can also be utilized for any partition of the tickets other than departments. In tne context of property management and analyzing the content of a database of service requests, this pipeline might enable descriptions of certain groups of properties or maintenance technicians. 
 
 ## 2.6 Seasonal Demand and System Capacity
 
@@ -1810,9 +1907,6 @@ Conversely, the tracts classified as "Low-Low" (highlighted in blue)—indicatin
 
 ::: {#refs}
 :::
-
-
-
 
 
 # Appendix: R and Python Code

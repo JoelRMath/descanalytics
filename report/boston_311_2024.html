@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Joël R. Pradines, Ph.D.">
-<meta name="dcterms.date" content="2026-08-16">
+<meta name="dcterms.date" content="2026-08-19">
 
 <title>Data Analytics for Boston 311, year 2024</title>
 <style>
@@ -4872,6 +4872,230 @@ jQuery.fn.highlight.options = { escapeRegex: true };
 </script>
 <script>/*! © SpryMedia Ltd - datatables.net/license */
 !function(n){var i,o;"function"==typeof define&&define.amd?define(["jquery","datatables.net"],function(t){return n(t,window,document)}):"object"==typeof exports?(i=require("jquery"),o=function(t,e){e.fn.dataTable||require("datatables.net")(t,e)},"undefined"==typeof window?module.exports=function(t,e){return t=t||window,e=e||i(t),o(t,e),n(e,0,t.document)}:(o(window,i),module.exports=n(i,window,window.document))):n(jQuery,window,document)}(function(d,t,e,n){"use strict";var a=d.fn.dataTable;function r(t,e){t.unhighlight(),e.rows({filter:"applied"}).data().length&&(e.columns().every(function(){var t=this;t.nodes().flatten().to$().unhighlight({className:"column_highlight"}),t.nodes().flatten().to$().highlight(t.search().trim().split(/\s+/),{className:"column_highlight"})}),t.highlight(e.search().trim().split(/\s+/)))}return d(e).on("init.dt.dth",function(t,e,n){var i,o;"dt"===t.namespace&&(i=new a.Api(e),o=d(i.table().body()),d(i.table().node()).hasClass("searchHighlight")||e.oInit.searchHighlight||a.defaults.searchHighlight)&&(i.on("draw.dt.dth column-visibility.dt.dth column-reorder.dt.dth",function(){r(o,i)}).on("destroy",function(){i.off("draw.dt.dth column-visibility.dt.dth column-reorder.dt.dth")}),i.search())&&r(o,i)}),a});</script>
+<script>$(document).ready(function(){
+    if (typeof $('[data-toggle="tooltip"]').tooltip === 'function') {
+        $('[data-toggle="tooltip"]').tooltip();
+    }
+    if ($('[data-toggle="popover"]').popover === 'function') {
+        $('[data-toggle="popover"]').popover();
+    }
+});
+</script>
+<style type="text/css">
+.lightable-minimal {
+border-collapse: separate;
+border-spacing: 16px 1px;
+width: 100%;
+margin-bottom: 10px;
+}
+.lightable-minimal td {
+margin-left: 5px;
+margin-right: 5px;
+}
+.lightable-minimal th {
+margin-left: 5px;
+margin-right: 5px;
+}
+.lightable-minimal thead tr:last-child th {
+border-bottom: 2px solid #00000050;
+empty-cells: hide;
+}
+.lightable-minimal tbody tr:first-child td {
+padding-top: 0.5em;
+}
+.lightable-minimal.lightable-hover tbody tr:hover {
+background-color: #f5f5f5;
+}
+.lightable-minimal.lightable-striped tbody tr:nth-child(even) {
+background-color: #f5f5f5;
+}
+.lightable-classic {
+border-top: 0.16em solid #111111;
+border-bottom: 0.16em solid #111111;
+width: 100%;
+margin-bottom: 10px;
+margin: 10px 5px;
+}
+.lightable-classic tfoot tr td {
+border: 0;
+}
+.lightable-classic tfoot tr:first-child td {
+border-top: 0.14em solid #111111;
+}
+.lightable-classic caption {
+color: #222222;
+}
+.lightable-classic td {
+padding-left: 5px;
+padding-right: 5px;
+color: #222222;
+}
+.lightable-classic th {
+padding-left: 5px;
+padding-right: 5px;
+font-weight: normal;
+color: #222222;
+}
+.lightable-classic thead tr:last-child th {
+border-bottom: 0.10em solid #111111;
+}
+.lightable-classic.lightable-hover tbody tr:hover {
+background-color: #F9EEC1;
+}
+.lightable-classic.lightable-striped tbody tr:nth-child(even) {
+background-color: #f5f5f5;
+}
+.lightable-classic-2 {
+border-top: 3px double #111111;
+border-bottom: 3px double #111111;
+width: 100%;
+margin-bottom: 10px;
+}
+.lightable-classic-2 tfoot tr td {
+border: 0;
+}
+.lightable-classic-2 tfoot tr:first-child td {
+border-top: 3px double #111111;
+}
+.lightable-classic-2 caption {
+color: #222222;
+}
+.lightable-classic-2 td {
+padding-left: 5px;
+padding-right: 5px;
+color: #222222;
+}
+.lightable-classic-2 th {
+padding-left: 5px;
+padding-right: 5px;
+font-weight: normal;
+color: #222222;
+}
+.lightable-classic-2 tbody tr:last-child td {
+border-bottom: 3px double #111111;
+}
+.lightable-classic-2 thead tr:last-child th {
+border-bottom: 1px solid #111111;
+}
+.lightable-classic-2.lightable-hover tbody tr:hover {
+background-color: #F9EEC1;
+}
+.lightable-classic-2.lightable-striped tbody tr:nth-child(even) {
+background-color: #f5f5f5;
+}
+.lightable-material {
+min-width: 100%;
+white-space: nowrap;
+table-layout: fixed;
+font-family: Roboto, sans-serif;
+border: 1px solid #EEE;
+border-collapse: collapse;
+margin-bottom: 10px;
+}
+.lightable-material tfoot tr td {
+border: 0;
+}
+.lightable-material tfoot tr:first-child td {
+border-top: 1px solid #EEE;
+}
+.lightable-material th {
+height: 56px;
+padding-left: 16px;
+padding-right: 16px;
+}
+.lightable-material td {
+height: 52px;
+padding-left: 16px;
+padding-right: 16px;
+border-top: 1px solid #eeeeee;
+}
+.lightable-material.lightable-hover tbody tr:hover {
+background-color: #f5f5f5;
+}
+.lightable-material.lightable-striped tbody tr:nth-child(even) {
+background-color: #f5f5f5;
+}
+.lightable-material.lightable-striped tbody td {
+border: 0;
+}
+.lightable-material.lightable-striped thead tr:last-child th {
+border-bottom: 1px solid #ddd;
+}
+.lightable-material-dark {
+min-width: 100%;
+white-space: nowrap;
+table-layout: fixed;
+font-family: Roboto, sans-serif;
+border: 1px solid #FFFFFF12;
+border-collapse: collapse;
+margin-bottom: 10px;
+background-color: #363640;
+}
+.lightable-material-dark tfoot tr td {
+border: 0;
+}
+.lightable-material-dark tfoot tr:first-child td {
+border-top: 1px solid #FFFFFF12;
+}
+.lightable-material-dark th {
+height: 56px;
+padding-left: 16px;
+padding-right: 16px;
+color: #FFFFFF60;
+}
+.lightable-material-dark td {
+height: 52px;
+padding-left: 16px;
+padding-right: 16px;
+color: #FFFFFF;
+border-top: 1px solid #FFFFFF12;
+}
+.lightable-material-dark.lightable-hover tbody tr:hover {
+background-color: #FFFFFF12;
+}
+.lightable-material-dark.lightable-striped tbody tr:nth-child(even) {
+background-color: #FFFFFF12;
+}
+.lightable-material-dark.lightable-striped tbody td {
+border: 0;
+}
+.lightable-material-dark.lightable-striped thead tr:last-child th {
+border-bottom: 1px solid #FFFFFF12;
+}
+.lightable-paper {
+width: 100%;
+margin-bottom: 10px;
+color: #444;
+}
+.lightable-paper tfoot tr td {
+border: 0;
+}
+.lightable-paper tfoot tr:first-child td {
+border-top: 1px solid #00000020;
+}
+.lightable-paper thead tr:last-child th {
+color: #666;
+vertical-align: bottom;
+border-bottom: 1px solid #00000020;
+line-height: 1.15em;
+padding: 10px 5px;
+}
+.lightable-paper td {
+vertical-align: middle;
+border-bottom: 1px solid #00000010;
+line-height: 1.15em;
+padding: 7px 5px;
+}
+.lightable-paper.lightable-hover tbody tr:hover {
+background-color: #F9EEC1;
+}
+.lightable-paper.lightable-striped tbody tr:nth-child(even) {
+background-color: #00000008;
+}
+.lightable-paper.lightable-striped tbody td {
+border: 0;
+}
+</style>
 
   <script>/*
  * Polyfill service v3.111.0
@@ -5057,9 +5281,10 @@ window.Quarto = {
   <li><a href="#structural-vocabulary-extraction" id="toc-structural-vocabulary-extraction" class="nav-link" data-scroll-target="#structural-vocabulary-extraction">2.5.2 Structural Vocabulary Extraction</a>
   <ul class="collapse">
   <li><a href="#the-emi-and-pmi-mathematical-framework" id="toc-the-emi-and-pmi-mathematical-framework" class="nav-link" data-scroll-target="#the-emi-and-pmi-mathematical-framework">2.5.2.1 The EMI and PMI Mathematical Framework</a></li>
-  <li><a href="#categorical-feature-selection" id="toc-categorical-feature-selection" class="nav-link" data-scroll-target="#categorical-feature-selection">Categorical Feature Selection</a></li>
-  <li><a href="#global-signal-detection-functional-alignment" id="toc-global-signal-detection-functional-alignment" class="nav-link" data-scroll-target="#global-signal-detection-functional-alignment">2.5.2.3 Global Signal Detection &amp; Functional Alignment</a></li>
+  <li><a href="#categorical-feature-selection" id="toc-categorical-feature-selection" class="nav-link" data-scroll-target="#categorical-feature-selection">2.5.2.2 Categorical Feature Selection</a></li>
+  <li><a href="#global-signal-functional-alignment" id="toc-global-signal-functional-alignment" class="nav-link" data-scroll-target="#global-signal-functional-alignment">2.5.2.3 Global Signal &amp; Functional Alignment</a></li>
   <li><a href="#high-signal-vocabulary-by-department" id="toc-high-signal-vocabulary-by-department" class="nav-link" data-scroll-target="#high-signal-vocabulary-by-department">2.5.2.4 High-Signal Vocabulary by Department</a></li>
+  <li><a href="#vocabulary-interpretation-via-local-generative-ai" id="toc-vocabulary-interpretation-via-local-generative-ai" class="nav-link" data-scroll-target="#vocabulary-interpretation-via-local-generative-ai">2.5.2.5 Vocabulary Interpretation via Local Generative AI</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#seasonal-demand-and-system-capacity" id="toc-seasonal-demand-and-system-capacity" class="nav-link" data-scroll-target="#seasonal-demand-and-system-capacity">2.6 Seasonal Demand and System Capacity</a>
@@ -5120,7 +5345,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">August 16, 2026</p>
+      <p class="date">August 19, 2026</p>
     </div>
   </div>
   
@@ -5200,8 +5425,8 @@ Table 1: Dataset Overview: Column types, unique values, and missing data.
 </figcaption>
 <div aria-describedby="tbl-data-dictionary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-374b3331768569ad227e" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-374b3331768569ad227e">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-b868867e36a2300874a3" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-b868867e36a2300874a3">{"x":{"filter":"none","vertical":false,"caption":"<caption>Dataset Overview: Column types, unique values, and missing data.<\/caption>","data":[["case_enquiry_id","open_dt","sla_target_dt","closed_dt","on_time","case_status","closure_reason","case_title","subject","reason","type","queue","department","submitted_photo","closed_photo","location","fire_district","pwd_district","city_council_district","police_district","neighborhood","neighborhood_services_district","ward","precinct","location_street_name","location_zipcode","latitude","longitude","geom_4326","source"],["numeric","POSIXct, POSIXt","POSIXct, POSIXt","POSIXct, POSIXt","character","character","character","character","character","character","character","character","character","logical","character","character","numeric","character","numeric","character","character","numeric","character","character","character","character","numeric","numeric","character","character"],[282836,259190,136622,239680,2,2,239102,3753,10,45,173,187,19,1,86795,74933,12,22,11,13,24,17,56,255,73917,37,80309,80303,80309,6],[0,0,22982,40802,0,0,41031,89,0,0,0,0,0,282836,196042,2745,3376,2858,2750,2853,2958,2750,2745,3723,2745,57967,2158,2158,2158,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Column<\/th>\n      <th>Type<\/th>\n      <th>Unique_Values<\/th>\n      <th>Missing_Values<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"dom":"tp","columnDefs":[{"className":"dt-right","targets":[2,3]},{"name":"Column","targets":0},{"name":"Type","targets":1},{"name":"Unique_Values","targets":2},{"name":"Missing_Values","targets":3}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </figure>
@@ -5720,7 +5945,7 @@ Figure 11: Enrichment heatmap showing which AI topics are statistically over-re
 <p>In summary, the raw text is first reduced to high-signal words via EMI, and PMI is utilized next to isolate the vocabulary strictly associated with a specific category. This dual-step approach is applied below to the <code>department</code> factor, evaluating its <span class="math inline">\(|C|=19\)</span> distinct organizational categories.</p>
 </section>
 <section id="categorical-feature-selection" class="level4">
-<h4 class="anchored" data-anchor-id="categorical-feature-selection">Categorical Feature Selection</h4>
+<h4 class="anchored" data-anchor-id="categorical-feature-selection">2.5.2.2 Categorical Feature Selection</h4>
 <p>Before executing the Information Theory algorithms, the dataset’s categorical variables had to be evaluated to remove variables with too few levels (target leakage) or too many levels (hyper-granularity).</p>
 <p>The tables below detail the inclusion and exclusion criteria applied to define the categorical set (<span class="math inline">\(C\)</span>) for the EMI pipeline.</p>
 <div class="cell">
@@ -5861,8 +6086,8 @@ Figure 12: Distribution of Expected Mutual Information (EMI) word counts, with 
 </div>
 </div>
 </section>
-<section id="global-signal-detection-functional-alignment" class="level4">
-<h4 class="anchored" data-anchor-id="global-signal-detection-functional-alignment">2.5.2.3 Global Signal Detection &amp; Functional Alignment</h4>
+<section id="global-signal-functional-alignment" class="level4">
+<h4 class="anchored" data-anchor-id="global-signal-functional-alignment">2.5.2.3 Global Signal &amp; Functional Alignment</h4>
 <p>With the structural categories defined, we applied the Expected Mutual Information (EMI) equation globally. The resulting distribution (<a href="#fig-emi-distribution" class="quarto-xref">Figure 12</a>) mathematically validates the text compression strategy. Plotted on a logarithmic scale, the massive density near zero indicates that the vast majority of tokens are administrative noise distributed evenly across all categories. However, the long right tail represents the surviving structural vocabulary that passed the <span class="math inline">\(EMI &gt; 0\)</span> threshold with high information scores.</p>
 <p>Furthermore, the ranking of these factors by mean EMI exposes a critical structural reality about municipal operations: <strong>the alignment of vocabulary and completion time</strong>.</p>
 <p>Indeed, notice that the factors with the highest information density (<code>queue</code>, <code>type</code>, <code>reason</code>, <code>department</code>) are strictly functional. They dictate exactly <em>what</em> the physical task is and <em>who</em> is assigned to it. Because the nature of the task dictates the required tools and statuses, it tightly controls the <em>technician’s vocabulary</em>. Conversely, circumstantial variables like <code>neighborhood</code> and <code>source</code> do not alter the physical reality of the work, yielding a much lower semantic footprint.</p>
@@ -5880,13 +6105,113 @@ Table 6
 </figcaption>
 <div aria-describedby="tbl-pmi-departments-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-fe6ea7f234bcaead0e10" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-fe6ea7f234bcaead0e10">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 200 Operational Words by Department (Ranked by PMI, Tie-broken by Volume)<\/caption>","data":[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200],["globe","hokey","ep","tote","sofa","reminders","courtesy","fuse","conduit","gg","abused","battery","relit","schd","50lbs","rugs","delv","improperly","fined","reminder","unshoveled","deliver","yardwaste","scheduler","loaded","mechanically","capitol","sr","photocell","contaminated","cubic","matreses","motoring","pendant","taps","faulty","yd","bulk","savers","pullbox","arietta","ravo","rect","hauler","kh","tvs","boxspring","nonshoveled","participation","splice","splices","insulated","overweight","prompt","spliced","execute","yw","neutral","television","vigilance","carthy","highlighting","styrofoam","twin","mailslot","on11","pallet","reid","mantles","acorn","slcb","dresser","recycle","collections","apon","cart","ce","tomorrow's","serviced","book","dumped","sweeper","curbside","ht","shoveled","couch","overloaded","bpw","swap","calendar","mva","leading","tv","delivered","fridge","truly","remade","mat","failure","promptly","ad","materials","improper","12noon","overloading","rug","furniture","collected","converted","dpw","transfer","early","warrant","code","waste","carts","asphalt","fixture","patches","return","outs","collection","stickers","tie","connections","boston’s","mixed","tied","passage","reinstallation","placed","dumping","mechanical","occupying","plow","swept","burner","storage","saver","stored","salted","overflow","crown","inforcement","plowed","extenet","minimize","castings","patch","loose","tires","inconvenience","overhead","zero","mode","allset","belly","evidence","wl","patience","potholes","label","pics","holiday","oh","icy","pg","attempt","removal","infront","jh","lp","melt","trash","unregistered","understanding","hold","reg","salting","ice","pick","abbutters","reconnect","yard","lamp","feed","autos","basket","mailbox","shopping","sweeping","refrigerator","arm","filled","mattress","today's","timely","recycling","upgrade","pwd"],["retrieval","restriping","hump","aim","informative","signals","reface","placard","concurrent","overtimed","consistent","operated","interventions","imminently","speeding","miles","module","webappviewer","restriped","yield","efficient","rpp","restriction","responds","encourage","patrols","actively","transportation","assistance","ticketed","improved","related","relating","cases","vehicle","neighborhoods","many","revised","bluebikes","streets","possible","directly","violators","parking","timed","contacting","timings","users","processed","communication","comfortable","slow","improves","biking","rolling","longer","registered","color","tow","driveways","apps","ped","boston311","expanding","moped","nearly","humps","buttons","flex","sequence","reporting","pm","phases","phase","country","cooperation","overtime","discontinued","stopping","timing","need","com","hp","scooter","towed","sequencing","utilize","safer","focus","arrow","evaluate","prioritize","vehicles","planned","quickly","signal","pavement","ten","operator","speed","plate","everyone","ease","map","moved","call","crossing","checking","s","thank","effect","walking","since","scale","violating","city’s","shows","operation","reported","careful","double","adjusted","visual","btd","resident","task","offer","types","boston","eligible","directions","flashing","submitted","sharing","intersection","running","legally","much","lanes","underpass","considered","button","ops","indication","traffic","marking","data","crosswalk","loading","trailer","citations","stop","parker","abandoned","city","violator","travel","south","egress","crosswalks","posts","happening","signage","controller","making","plan","determined","van","guidelines","according","tight","others","normal","navigate","handicap","adjustments","bike","bus","red","signs","approximately","direction","first","rental","tagged","extended","goal","verified","lane","adding","otherwise","zone","projects","tech","capacity","enforcement","officers","restrictions","permits","warning"],["warranty","cassidy","forestry","sh","pathfinder","mi","mfd","ds","canopy","replant","shmidj","mgl","honeylocust","midj","ufd","shmi","barrett","class","crabapple","teacher","watering","stakes","pruned","northern","pruning","planted","urban","caring","specifications","automatically","hc","bostons","landscaping","jd","planting","bprd","abuts","limb","hanger","replanting","forest","interest","success","ch","jl","jb","swing","fall","replanted","dr","increasing","od","cherry","initiative","trees","pip","accidental","attn","courts","latch","prune","raise","tree","populate","meets","www.boston.gov","dj","arborist","eastern","makes","species","cared","tennis","surfacing","protected","pathways","elm","shade","branch","https","stump","increase","oak","division","clearance","fields","alive","visit","cutting","growing","limbs","fell","timer","notification","maple","tot","downed","departments","actual","roots","marked","meet","closing","proximity","play","spring","inc","renovation","young","service","require","boston's","permitting","handled","boards","reading","care","rangers","fountain","event","question","recreation","pits","agreement","improvement","parks","linden","documentation","abutting","pit","period","underground","net","growth","maintain","wide","storm","flag","learn","plant","trimmed","summer","screws","raised","ada","structural","conversation","repeat","low","adjacent","toilets","season","park","typically","note","gates","healthy","emptied","cob","maintenance","utilities","grate","crew","franklin","north","branches","law","proof","requests","damaging","interior","questions","nest","individual","involved","inspected","lines","ownership","cut","separate","capital","conflicting","greenway","owned","live","therefore","bench","memorial","court","field","upcoming","design","installing","cemetery","created","comes","playground","app","massachusetts","grass"],["burrows","burrow","ars","esd","illness","sewers","baited","rx","baiting","droppings","knocker","abatements","reinspection","guest","ivan","ill","foodborne","complaintant","core","mice","gc","nfc","borne","products","gloves","extermination","voluntarily","listing","cooked","exterminator","withdrawal","yt","abated","ears","narrative","bait","abatement","descriptive","occupant","sanitary","rodents","seeing","activity","monitoring","foods","treat","duty","ic","grounds","protocol","served","heat","greatly","ab","extra","pest","cooking","stations","written","insufficient","photos","inspector","findings","conducted","temperatures","follows","practices","full","breakdown","unrelated","lvm","seal","rodent","rubbish","treatment","tenant","infestation","eyes","premise","basis","product","withdrew","establishment","cause","discussed","wearing","policy","proceed","shed","procedures","share","detailed","sell","temperature","solve","corrected","ref","treating","kitchen","bos","observed","excluding","wrote","investigating","write","mayors","writing","monitor","holidays","ward","weekly","meeting","copy","initial","smoke","employees","vegetation","dispatched","conduct","licensed","notice","inspect","taking","investigation","sl","ceiling","dates","rats","chicken","approval","hearing","health","license","filed","restaurant","basins","holding","holes","exterior","appreciate","properties","legal","store","voice","receptacles","sites","homeowner","recent","exposed","regularly","thru","environmental","trap","referring","reports","talked","answer","washing","neighboring","setup","cep","observe","machine","followed","permitted","instructed","foundation","alert","special","us","food","hire","foam","rules","surrounding","closure","manager","employee","fines","invoices","community","include","restored","report","email","building","hours","issues","look","isd","basement","complaints","marlborough","entering","mail","lids","action","particular","concerns","met"],["cd","df","syringe","dt","ra","syr","jt","syringes","jg","recovered","dw","needle","needles","thorough","sharps","search","discarded","authorities","safely","caps","image","dp","searched","relocate","mobile","nearby","gps","find","resubmit","locate","items","unsure","unable","better","seen","homeless","local","j","pictures","prior","help","proper","confirmed","information","can","people","station","oct","pic","sun","answer","given","nov","jul","sat","behind","info","sep","fri","edt","jun","aug","alley","resolved","picture","thu","mon","dec","access","address","wed","est","please","tue","may","item","apr","mar","feb","request","jan","contact","duplicate","date","lot","wrong","number","area","details","sure","intersection","e","just","located","thanks","form","two","found","sorry","swept","get","one","park","call","called","arrival","department","notice","see","us","invalid","error","left","trash","st","submit","new","need","location","private","street","removed","noted","thank","property","parking","transportation",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["barking","quarantine","crt","santana","nationalgrid","rabies","gull","bhn","captured","partners","bite","sutera","hickey","nagle","natlgrid","bat","relations","released","recorded","flew","dcr's","stycos","pmd","outreach","approached","ng","doa","carver","flagged","leashed","mayor’s","bill","owner's","fledgling","watson","angell","capture","hawk","featured","jackson","didn’t","heard","injured","patti","callback","ms107","helpline","comment","visiting","goose","patrolled","victor","bh","emb","af","advancement","pamela","vet","wasn’t","munroe","doesn’t","mayor","whatever","deceased","leash","agent","mary","turkey","complainant","bsg111","jones","jeff","external","ms","agency","p","mspca","patrol","fly","transporting","utl","dispatch","dg","seagull","transport","coyote","ac","facilities","educated","baby","president","abutter","family","im","engineers","asst","c","transported","cass","click","efforts","pigeon","encampment","pc","respond","appeared","bps","en","resources","affairs","context","hospital","caller","southwest","cats","cat","wildlife","bm","springs","happy","lives","works","sending","dogs","corridor","updates","city's","central","deer","resubmitted","dcr","assistant","definitely","staff","raccoon","reviewed","shelter","plaza","birds","roxbury","consider","testing","support","accept","answered","managers","speak","advice","schools","bit","massdot","centers","k","suggestions","hear","adequate","advised","responded","library","dog","conservation","scene","clerk","gone","bird","thomas","deliveries","disposal","per","public","suggested","ma","comments","complex","responding","charles","website","states","closely","taken","asking","review","arl","pass","we’re","finder","showed","j","letting","july","stated","phone","bfd","planning","massport","larger","operations","apartment","free","march"],["incumbent","shadow","refereed","property’s","wipe","chemical","chemicals","assets","pressure","washer","paint","management","attempts","graffiti","department","done","dot","tag","potential","original","reallocated","remains","power","damage","high","match","mass","property","wall","located","mbta","number","remove","safe","removed","able","behind","fence","location","reach","painted","three","business","city","building","agency","external","owner","sat","light","boston","due","unable","sticker","may","jul","oct","nov","sun","jun","edt","sep","aug","way","also","mon","removal","resolved","tue","thu","apr","private","referred","wed","must","date","error","mar","address","fri","est","invalid","existing","duplicate","feb","request","noted",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["disinfected","departure","cb’s","jetted","14x16","cb's","flushed","jf","cb","mh","retrieved","dug","flushing","bws","bwsc","leak","leaking","keys","flood","manhole","lateral","valve","odor","stopped","patched","internal","cover","sealed","shut","sinkhole","main","hydrant","plumber","meter","pipe","hit","customer","past","r","water","sewer","connection","covers","investigated","basement","states","drain","d","tested","per","reallocated","belong","lines","gave","gate","line","test","open","missing","hole","repaired","emergency","agent","fire","running","pothole","checked","contractor","leaves","taking","consider","arrival","cleared","now","cleaned","speak","let","explained","respond","crew","around","dial","due","process","enough","submit","sincerely","feel","upon","repair","inside","error","stated","notified","team","repairs","taken","belongs","wrong","spoke","problem","replaced","back","form","cut","apologize","st","broken","called","information","find","debris","external","agency","also","invalid","construction","work","issue","request","put","working","street","site","owner","service","see","resubmit","please","private","resolved","already","date","loose","new","address","left","area","made","contact","set","referred","found","sidewalk","existing","removed","clear","noted","duplicate","boston","property","call","time","location","need","thank","edt",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["rb","lmom","lost","finder","returned","shelter","bm","dog","pc","stray","transported","file","transport","dg","wildlife","transporting","ac","mspca","cat","c","bsg111","im","jones","brought","ms","munroe","af","deceased","emb","states","caller","dogs","called","phone","owner","taken","responded","animal","stated","per","gone","control","report","message","angell","via","locate","searched","met","located","spoke","picked","dial","constituent","enough","submit","sincerely","feel","error","unable","process","morning","back","team","arrival","number","left","said","care","information","contact","invalid","pick","dead","address","found","request","made","resolved","please","area","date","new","location","duplicate","existing","call","boston","noted",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["loud","reports","public","made","reported","directly","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["disability","commission","office","contact","contacting","thank","boston","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["resolution","status","completed","resolved","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]],"container":"<table class=\"display compact\">\n  <thead>\n    <tr>\n      <th>Rank<\/th>\n      <th>PWDx<\/th>\n      <th>BTDT<\/th>\n      <th>PARK<\/th>\n      <th>ISD<\/th>\n      <th>GEN_<\/th>\n      <th>INFO<\/th>\n      <th>PROP<\/th>\n      <th>BWSC<\/th>\n      <th>ANML<\/th>\n      <th>BPD_<\/th>\n      <th>DISB<\/th>\n      <th>DND_<\/th>\n      <th>ONS_<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":20,"scrollX":true,"scrollY":"570px","dom":"ftip","searchHighlight":true,"columnDefs":[{"className":"dt-right","targets":0},{"name":"Rank","targets":0},{"name":"PWDx","targets":1},{"name":"BTDT","targets":2},{"name":"PARK","targets":3},{"name":"ISD","targets":4},{"name":"GEN_","targets":5},{"name":"INFO","targets":6},{"name":"PROP","targets":7},{"name":"BWSC","targets":8},{"name":"ANML","targets":9},{"name":"BPD_","targets":10},{"name":"DISB","targets":11},{"name":"DND_","targets":12},{"name":"ONS_","targets":13}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,20,25,50,100],"rowCallback":"function(row, data, displayNum, displayIndex, dataIndex) {\nvar value=data[0]; $(this.api().cell(row, 0).node()).css({'font-size':'13px'});\nvar value=data[1]; $(this.api().cell(row, 1).node()).css({'font-size':'13px'});\nvar value=data[2]; $(this.api().cell(row, 2).node()).css({'font-size':'13px'});\nvar value=data[3]; $(this.api().cell(row, 3).node()).css({'font-size':'13px'});\nvar value=data[4]; $(this.api().cell(row, 4).node()).css({'font-size':'13px'});\nvar value=data[5]; $(this.api().cell(row, 5).node()).css({'font-size':'13px'});\nvar value=data[6]; $(this.api().cell(row, 6).node()).css({'font-size':'13px'});\nvar value=data[7]; $(this.api().cell(row, 7).node()).css({'font-size':'13px'});\nvar value=data[8]; $(this.api().cell(row, 8).node()).css({'font-size':'13px'});\nvar value=data[9]; $(this.api().cell(row, 9).node()).css({'font-size':'13px'});\nvar value=data[10]; $(this.api().cell(row, 10).node()).css({'font-size':'13px'});\nvar value=data[11]; $(this.api().cell(row, 11).node()).css({'font-size':'13px'});\nvar value=data[12]; $(this.api().cell(row, 12).node()).css({'font-size':'13px'});\nvar value=data[13]; $(this.api().cell(row, 13).node()).css({'font-size':'13px'});\n}"}},"evals":["options.rowCallback"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-b48da65b5da1c0d05cbd" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-b48da65b5da1c0d05cbd">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 200 Operational Words by Department (Ranked by PMI, Tie-broken by Volume)<\/caption>","data":[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200],["globe","hokey","ep","tote","sofa","reminders","courtesy","fuse","conduit","gg","abused","battery","relit","schd","50lbs","rugs","delv","improperly","fined","reminder","unshoveled","deliver","yardwaste","scheduler","loaded","mechanically","capitol","sr","photocell","contaminated","cubic","matreses","motoring","pendant","taps","faulty","yd","bulk","savers","pullbox","arietta","ravo","rect","hauler","kh","tvs","boxspring","nonshoveled","participation","splice","splices","insulated","overweight","prompt","spliced","execute","yw","neutral","television","vigilance","carthy","highlighting","styrofoam","twin","mailslot","on11","pallet","reid","mantles","acorn","slcb","dresser","recycle","collections","apon","cart","ce","tomorrow's","serviced","book","dumped","sweeper","curbside","ht","shoveled","couch","overloaded","bpw","swap","calendar","mva","leading","tv","delivered","fridge","truly","remade","mat","failure","promptly","ad","materials","improper","12noon","overloading","rug","furniture","collected","converted","dpw","transfer","early","warrant","code","waste","carts","asphalt","fixture","patches","return","outs","collection","stickers","tie","connections","boston’s","mixed","tied","passage","reinstallation","placed","dumping","mechanical","occupying","plow","swept","burner","storage","saver","stored","salted","overflow","crown","inforcement","plowed","extenet","minimize","castings","patch","loose","tires","inconvenience","overhead","zero","mode","allset","belly","evidence","wl","patience","potholes","label","pics","holiday","oh","icy","pg","attempt","removal","infront","jh","lp","melt","trash","unregistered","understanding","hold","reg","salting","ice","pick","abbutters","reconnect","yard","lamp","feed","autos","basket","mailbox","shopping","sweeping","refrigerator","arm","filled","mattress","today's","timely","recycling","upgrade","pwd"],["retrieval","restriping","hump","aim","informative","signals","reface","placard","concurrent","overtimed","consistent","operated","interventions","imminently","speeding","miles","module","webappviewer","restriped","yield","efficient","rpp","restriction","responds","encourage","patrols","actively","transportation","assistance","ticketed","improved","related","relating","cases","vehicle","neighborhoods","many","revised","bluebikes","streets","possible","directly","violators","parking","timed","contacting","timings","users","processed","communication","comfortable","slow","improves","biking","rolling","longer","registered","color","tow","driveways","apps","ped","boston311","expanding","moped","nearly","humps","buttons","flex","sequence","reporting","pm","phases","phase","country","cooperation","overtime","discontinued","stopping","timing","need","com","hp","scooter","towed","sequencing","utilize","safer","focus","arrow","evaluate","prioritize","vehicles","planned","quickly","signal","pavement","ten","operator","speed","plate","everyone","ease","map","moved","call","crossing","checking","s","thank","effect","walking","since","scale","violating","city’s","shows","operation","reported","careful","double","adjusted","visual","btd","resident","task","offer","types","boston","eligible","directions","flashing","submitted","sharing","intersection","running","legally","much","lanes","underpass","considered","button","ops","indication","traffic","marking","data","crosswalk","loading","trailer","citations","stop","parker","abandoned","city","violator","travel","south","egress","crosswalks","posts","happening","signage","controller","making","plan","determined","van","guidelines","according","tight","others","normal","navigate","handicap","adjustments","bike","bus","red","signs","approximately","direction","first","rental","tagged","extended","goal","verified","lane","adding","otherwise","zone","projects","tech","capacity","enforcement","officers","restrictions","permits","warning"],["warranty","cassidy","forestry","sh","pathfinder","mi","mfd","ds","canopy","replant","shmidj","mgl","honeylocust","midj","ufd","shmi","barrett","class","crabapple","teacher","watering","stakes","pruned","northern","pruning","planted","urban","caring","specifications","automatically","hc","bostons","landscaping","jd","planting","bprd","abuts","limb","hanger","replanting","forest","interest","success","ch","jl","jb","swing","fall","replanted","dr","increasing","od","cherry","initiative","trees","pip","accidental","attn","courts","latch","prune","raise","tree","populate","meets","www.boston.gov","dj","arborist","eastern","makes","species","cared","tennis","surfacing","protected","pathways","elm","shade","branch","https","stump","increase","oak","division","clearance","fields","alive","visit","cutting","growing","limbs","fell","timer","notification","maple","tot","downed","departments","actual","roots","marked","meet","closing","proximity","play","spring","inc","renovation","young","service","require","boston's","permitting","handled","boards","reading","care","rangers","fountain","event","question","recreation","pits","agreement","improvement","parks","linden","documentation","abutting","pit","period","underground","net","growth","maintain","wide","storm","flag","learn","plant","trimmed","summer","screws","raised","ada","structural","conversation","repeat","low","adjacent","toilets","season","park","typically","note","gates","healthy","emptied","cob","maintenance","utilities","grate","crew","franklin","north","branches","law","proof","requests","damaging","interior","questions","nest","individual","involved","inspected","lines","ownership","cut","separate","capital","conflicting","greenway","owned","live","therefore","bench","memorial","court","field","upcoming","design","installing","cemetery","created","comes","playground","app","massachusetts","grass"],["burrows","burrow","ars","esd","illness","sewers","baited","rx","baiting","droppings","knocker","abatements","reinspection","guest","ivan","ill","foodborne","complaintant","core","mice","gc","nfc","borne","products","gloves","extermination","voluntarily","listing","cooked","exterminator","withdrawal","yt","abated","ears","narrative","bait","abatement","descriptive","occupant","sanitary","rodents","seeing","activity","monitoring","foods","treat","duty","ic","grounds","protocol","served","heat","greatly","ab","extra","pest","cooking","stations","written","insufficient","photos","inspector","findings","conducted","temperatures","follows","practices","full","breakdown","unrelated","lvm","seal","rodent","rubbish","treatment","tenant","infestation","eyes","premise","basis","product","withdrew","establishment","cause","discussed","wearing","policy","proceed","shed","procedures","share","detailed","sell","temperature","solve","corrected","ref","treating","kitchen","bos","observed","excluding","wrote","investigating","write","mayors","writing","monitor","holidays","ward","weekly","meeting","copy","initial","smoke","employees","vegetation","dispatched","conduct","licensed","notice","inspect","taking","investigation","sl","ceiling","dates","rats","chicken","approval","hearing","health","license","filed","restaurant","basins","holding","holes","exterior","appreciate","properties","legal","store","voice","receptacles","sites","homeowner","recent","exposed","regularly","thru","environmental","trap","referring","reports","talked","answer","washing","neighboring","setup","cep","observe","machine","followed","permitted","instructed","foundation","alert","special","us","food","hire","foam","rules","surrounding","closure","manager","employee","fines","invoices","community","include","restored","report","email","building","hours","issues","look","isd","basement","complaints","marlborough","entering","mail","lids","action","particular","concerns","met"],["cd","df","syringe","dt","ra","syr","jt","syringes","jg","recovered","dw","needle","needles","thorough","sharps","search","discarded","authorities","safely","caps","image","dp","searched","relocate","mobile","nearby","gps","find","resubmit","locate","items","unsure","unable","better","seen","homeless","local","j","pictures","prior","help","proper","confirmed","information","can","people","station","oct","pic","sun","answer","given","nov","jul","sat","behind","info","sep","fri","edt","jun","aug","alley","resolved","picture","thu","mon","dec","access","address","wed","est","please","tue","may","item","apr","mar","feb","request","jan","contact","duplicate","date","lot","wrong","number","area","details","sure","intersection","e","just","located","thanks","form","two","found","sorry","swept","get","one","park","call","called","arrival","department","notice","see","us","invalid","error","left","trash","st","submit","new","need","location","private","street","removed","noted","thank","property","parking","transportation",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["barking","quarantine","crt","santana","nationalgrid","rabies","gull","bhn","captured","partners","bite","sutera","hickey","nagle","natlgrid","bat","relations","released","recorded","flew","dcr's","stycos","pmd","outreach","approached","ng","doa","carver","flagged","leashed","mayor’s","bill","owner's","fledgling","watson","angell","capture","hawk","featured","jackson","didn’t","heard","injured","patti","callback","ms107","helpline","comment","visiting","goose","patrolled","victor","bh","emb","af","advancement","pamela","vet","wasn’t","munroe","doesn’t","mayor","whatever","deceased","leash","agent","mary","turkey","complainant","bsg111","jones","jeff","external","ms","agency","p","mspca","patrol","fly","transporting","utl","dispatch","dg","seagull","transport","coyote","ac","facilities","educated","baby","president","abutter","family","im","engineers","asst","c","transported","cass","click","efforts","pigeon","encampment","pc","respond","appeared","bps","en","resources","affairs","context","hospital","caller","southwest","cats","cat","wildlife","bm","springs","happy","lives","works","sending","dogs","corridor","updates","city's","central","deer","resubmitted","dcr","assistant","definitely","staff","raccoon","reviewed","shelter","plaza","birds","roxbury","consider","testing","support","accept","answered","managers","speak","advice","schools","bit","massdot","centers","k","suggestions","hear","adequate","advised","responded","library","dog","conservation","scene","clerk","gone","bird","thomas","deliveries","disposal","per","public","suggested","ma","comments","complex","responding","charles","website","states","closely","taken","asking","review","arl","pass","we’re","finder","showed","j","letting","july","stated","phone","bfd","planning","massport","larger","operations","apartment","free","march"],["incumbent","shadow","refereed","property’s","wipe","chemical","chemicals","assets","pressure","washer","paint","management","attempts","graffiti","department","done","dot","tag","potential","original","reallocated","remains","power","damage","high","match","mass","property","wall","located","mbta","number","remove","safe","removed","able","behind","fence","location","reach","painted","three","business","city","building","agency","external","owner","sat","light","boston","due","unable","sticker","may","jul","oct","nov","sun","jun","edt","sep","aug","way","also","mon","removal","resolved","tue","thu","apr","private","referred","wed","must","date","error","mar","address","fri","est","invalid","existing","duplicate","feb","request","noted",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["disinfected","departure","cb’s","jetted","14x16","cb's","flushed","jf","cb","mh","retrieved","dug","flushing","bws","bwsc","leak","leaking","keys","flood","manhole","lateral","valve","odor","stopped","patched","internal","cover","sealed","shut","sinkhole","main","hydrant","plumber","meter","pipe","hit","customer","past","r","water","sewer","connection","covers","investigated","basement","states","drain","d","tested","per","reallocated","belong","lines","gave","gate","line","test","open","missing","hole","repaired","emergency","agent","fire","running","pothole","checked","contractor","leaves","taking","consider","arrival","cleared","now","cleaned","speak","let","explained","respond","crew","around","dial","due","process","enough","submit","sincerely","feel","upon","repair","inside","error","stated","notified","team","repairs","taken","belongs","wrong","spoke","problem","replaced","back","form","cut","apologize","st","broken","called","information","find","debris","external","agency","also","invalid","construction","work","issue","request","put","working","street","site","owner","service","see","resubmit","please","private","resolved","already","date","loose","new","address","left","area","made","contact","set","referred","found","sidewalk","existing","removed","clear","noted","duplicate","boston","property","call","time","location","need","thank","edt",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["rb","lmom","lost","finder","returned","shelter","bm","dog","pc","stray","transported","file","transport","dg","wildlife","transporting","ac","mspca","cat","c","bsg111","im","jones","brought","ms","munroe","af","deceased","emb","states","caller","dogs","called","phone","owner","taken","responded","animal","stated","per","gone","control","report","message","angell","via","locate","searched","met","located","spoke","picked","dial","constituent","enough","submit","sincerely","feel","error","unable","process","morning","back","team","arrival","number","left","said","care","information","contact","invalid","pick","dead","address","found","request","made","resolved","please","area","date","new","location","duplicate","existing","call","boston","noted",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["loud","reports","public","made","reported","directly","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["disability","commission","office","contact","contacting","thank","boston","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["resolution","status","completed","resolved","date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["date",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]],"container":"<table class=\"display compact\">\n  <thead>\n    <tr>\n      <th>Rank<\/th>\n      <th>PWDx (Public Works)<\/th>\n      <th>BTDT (Transportation)<\/th>\n      <th>PARK (Parks and Recreation)<\/th>\n      <th>ISD (Inspectional Services)<\/th>\n      <th>GEN_ (General / 311)<\/th>\n      <th>INFO (Info / Hotline)<\/th>\n      <th>PROP (Property Management)<\/th>\n      <th>BWSC (Water and Sewer)<\/th>\n      <th>ANML (Animal Control)<\/th>\n      <th>BPD_ (Police Department)<\/th>\n      <th>DISB (Disabilities Commission)<\/th>\n      <th>DND_ (Neighborhood Development)<\/th>\n      <th>ONS_ (Neighborhood Services)<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":20,"scrollX":true,"scrollY":"580px","dom":"ftip","searchHighlight":true,"columnDefs":[{"className":"dt-right","targets":0},{"name":"Rank","targets":0},{"name":"PWDx (Public Works)","targets":1},{"name":"BTDT (Transportation)","targets":2},{"name":"PARK (Parks and Recreation)","targets":3},{"name":"ISD (Inspectional Services)","targets":4},{"name":"GEN_ (General / 311)","targets":5},{"name":"INFO (Info / Hotline)","targets":6},{"name":"PROP (Property Management)","targets":7},{"name":"BWSC (Water and Sewer)","targets":8},{"name":"ANML (Animal Control)","targets":9},{"name":"BPD_ (Police Department)","targets":10},{"name":"DISB (Disabilities Commission)","targets":11},{"name":"DND_ (Neighborhood Development)","targets":12},{"name":"ONS_ (Neighborhood Services)","targets":13}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,20,25,50,100],"rowCallback":"function(row, data, displayNum, displayIndex, dataIndex) {\nvar value=data[0]; $(this.api().cell(row, 0).node()).css({'font-size':'13px'});\nvar value=data[1]; $(this.api().cell(row, 1).node()).css({'font-size':'13px'});\nvar value=data[2]; $(this.api().cell(row, 2).node()).css({'font-size':'13px'});\nvar value=data[3]; $(this.api().cell(row, 3).node()).css({'font-size':'13px'});\nvar value=data[4]; $(this.api().cell(row, 4).node()).css({'font-size':'13px'});\nvar value=data[5]; $(this.api().cell(row, 5).node()).css({'font-size':'13px'});\nvar value=data[6]; $(this.api().cell(row, 6).node()).css({'font-size':'13px'});\nvar value=data[7]; $(this.api().cell(row, 7).node()).css({'font-size':'13px'});\nvar value=data[8]; $(this.api().cell(row, 8).node()).css({'font-size':'13px'});\nvar value=data[9]; $(this.api().cell(row, 9).node()).css({'font-size':'13px'});\nvar value=data[10]; $(this.api().cell(row, 10).node()).css({'font-size':'13px'});\nvar value=data[11]; $(this.api().cell(row, 11).node()).css({'font-size':'13px'});\nvar value=data[12]; $(this.api().cell(row, 12).node()).css({'font-size':'13px'});\nvar value=data[13]; $(this.api().cell(row, 13).node()).css({'font-size':'13px'});\n}"}},"evals":["options.rowCallback"],"jsHooks":[]}</script>
 </div>
 </div>
 </figure>
 </div>
 </div>
+</section>
+<section id="vocabulary-interpretation-via-local-generative-ai" class="level4">
+<h4 class="anchored" data-anchor-id="vocabulary-interpretation-via-local-generative-ai">2.5.2.5 Vocabulary Interpretation via Local Generative AI</h4>
+<p>To provide an easily readable view of the statistically extracted vocabulary, we added a local Large Language Model (LLM) to the pipeline.</p>
+<p>The LLM was not used to read the raw operational tickets—an approach that often struggles with context window limitations and noise. Instead, the LLM was only fed the top 200 high-signal words extracted by the PMI algorithm, anf we forced the AI to act strictly as a semantic translator. The LLM was provided with the baseline context that it was evaluating a municipal workforce:</p>
+<blockquote class="blockquote">
+<p><strong>Prompt</strong> “You are a municipal operations analyst. I am providing you with a list of the top statistically significant words extracted from the ‘closure notes’ of a specific city department, sorted by their Pointwise Mutual Information (PMI) score. This means these words represent the highly specific, unique physical tasks and vocabulary of this department. Based only on these words, write a concise, 3-sentence operational profile describing exactly what this department does in the physical world. Do not invent tasks outside of this vocabulary.”</p>
+</blockquote>
+<p>Descriptions provided by the LLM are presented in <a href="#tbl-llm-profiles" class="quarto-xref">Table 7</a>.</p>
+<blockquote class="blockquote">
+<p><strong>Note</strong>: The Boston Police Department (BPD) profile generated below relies heavily on words related to noise and public disturbances. This is because the 311 system is explicitly reserved for non-emergency municipal issues; active crimes are routed through 911 and therefore do not appear in this dataset’s vocabulary.</p>
+</blockquote>
+<div class="cell">
+<div id="tbl-llm-profiles" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-llm-profiles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table 7: Generative Translation of PMI Vocabulary Arrays into Operational Profiles
+</figcaption>
+<div aria-describedby="tbl-llm-profiles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="table table-striped table-hover cell caption-top table-sm small">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Department</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">AI-Translated Operational Profile</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>PWDx</strong><br>
+<span style="font-size:0.85em; color:gray;">Public Works</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided list of words, I&#39;ve identified the following operational profile for the city department: This department is responsible for managing and maintaining the city&#39;s waste management and snow removal infrastructure. They are tasked with ensuring the proper collection, transfer, and disposal of waste and yard waste, as well as plowing and salting streets to keep them clear of snow and ice.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>BTDT</strong><br>
+<span style="font-size:0.85em; color:gray;">Transportation</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, it appears that this department is responsible for managing and maintaining traffic and transportation infrastructure in the city. Specifically, they are involved in tasks such as restriping streets, installing and updating traffic signals and signs, and enforcing parking and traffic regulations, including issuing citations to violators. The department also prioritizes improving safety and efficiency, with a focus on enhancing pedestrian and cyclist safety through the installation of crossing and bike infrastructure.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>PARK</strong><br>
+<span style="font-size:0.85em; color:gray;">Parks and Recreation</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided list of statistically significant words, I have constructed an operational profile for the city department: This department is primarily responsible for the maintenance, pruning, and replanting of trees, particularly in urban settings, with a focus on species such as honeylocust, crabapple, and maple. The department&#39;s work involves ensuring the health and safety of the trees, as well as protecting and repairing park features like pathways, courts, and playgrounds. Additionally, the department may be involved in tasks related to forest management, including surveying, documentation, and permitting, as well as responding to and addressing issues related to storm damage and tree falls.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>ISD</strong><br>
+<span style="font-size:0.85em; color:gray;">Inspectional Services</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, here is a concise operational profile describing what this department does: This department is responsible for monitoring and addressing infestations of rodents, such as mice and rats, in various premises, including restaurants, homes, and businesses. They conduct inspections, investigations, and treatments to ensure sanitary conditions and compliance with health codes, which includes identifying and sealing entry points, treating holes and burrows, and monitoring temperatures and food handling practices. The department also handles complaints, conducts re-inspections, and may issue fines or notices to ensure that premises are kept free of pests and maintained in a safe and healthy condition.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>GEN_</strong><br>
+<span style="font-size:0.85em; color:gray;">General / 311</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, I can create an operational profile for this department. Here&#39;s a concise, 3-sentence description: This department is primarily involved in the physical task of collecting and processing sharps and needles, as well as other items of interest, such as syringes and medical waste. They conduct thorough searches, especially in areas such as alleys and parking lots, to locate and safely collect these items, often working with local authorities and transportation services to ensure proper disposal and removal. The department also provides assistance and guidance to individuals, including those experiencing homelessness, and may utilize mobile and GPS technologies to aid in their operations.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>INFO</strong><br>
+<span style="font-size:0.85em; color:gray;">Info / Hotline</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided list of statistically significant words, it appears that this department is responsible for wildlife conservation and management. The presence of words like &quot;captive&quot;, &quot;quarantine&quot;, &quot;capture&quot;, &quot;transport&quot;, and &quot;shelter&quot; suggests that the department is involved in the care and rehabilitation of injured or orphaned animals, such as birds, dogs, and wildlife. Additionally, the inclusion of words like &quot;patrol&quot;, &quot;response&quot;, and &quot;dispatch&quot; implies that the department also provides field services, such as responding to calls about wildlife in need of assistance or providing education and outreach to the public about wildlife conservation.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>PROP</strong><br>
+<span style="font-size:0.85em; color:gray;">Property Management</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided department words, here is a concise operational profile describing what this department does in the physical world: This department is primarily responsible for managing and maintaining the physical assets and properties within the city, particularly with regards to painting and applying chemicals to surfaces, such as buildings and walls. They also handle graffiti removal and attempts to protect these assets from damage, often working with external agencies, such as the MBTA, and private property owners. Additionally, they may be involved in repairing or replacing damaged surfaces, as well as ensuring safe and accessible locations are maintained through measures like installing fences and removing obstructions.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>BWSC</strong><br>
+<span style="font-size:0.85em; color:gray;">Water and Sewer</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided department words, I can create an operational profile that describes the physical tasks and vocabulary of this department. Here is a concise, 3-sentence profile: This department is responsible for maintaining and repairing the city&#39;s water and sewer infrastructure, including pipes, valves, and manholes. They investigate and respond to emergencies such as leaks, floods, and sinkholes, and perform routine maintenance tasks like flushing and cleaning of pipes and systems. Additionally, they handle customer requests for repairs and connections, and work with contractors and other agencies to resolve issues and keep the city&#39;s water and sewer systems running smoothly.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>ANML</strong><br>
+<span style="font-size:0.85em; color:gray;">Animal Control</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, I can create an operational profile for the department. Here it is: This department appears to be responsible for managing and coordinating the transport and care of stray and deceased animals, primarily dogs and cats, from locations such as shelters, wildlife areas, and private homes. The department&#39;s team likely responds to requests for assistance, locates and retrieves animals, and provides information to owners and constituents. The department also seems to be involved in filing and tracking reports of animal incidents, including lost and found animals, and working with organizations like the MSPCA and Angell.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>BPD_</strong><br>
+<span style="font-size:0.85em; color:gray;">Police Department</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided department words, I can create an operational profile that describes the department&#39;s physical tasks. Here it is: This department appears to be responsible for conducting noisy or loud activities in a public setting, potentially involving reports or recorded data. The team likely makes direct observations or recordings on specific dates, which are then reported and documented. Overall, the department seems to focus on collecting and reporting information about public events or activities that occur at specific times or locations.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; width: 20%;"><strong>DISB</strong><br>
+<span style="font-size:0.85em; color:gray;">Disabilities Commission</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, I can infer that this department is responsible for facilitating the physical process of obtaining disability-related services or benefits, likely through an office-based setting in Boston. The mention of contacting and contact suggests a customer-facing or outreach-oriented role, where the department interacts with individuals to provide assistance or gather information.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; width: 20%;"><strong>DND_</strong><br>
+<span style="font-size:0.85em; color:gray;">Neighborhood Development</span></td>
+<td style="text-align: left; width: 80%;">Based on the provided words, the operational profile of this department is that they are responsible for tracking and resolving physical issues or problems, likely related to infrastructure, public spaces, or facilities, as evidenced by the use of words like &quot;completed&quot; and &quot;resolved&quot;. The department&#39;s work involves monitoring and updating the status of these issues over time, with a focus on achieving a specific outcome or resolution. The department&#39;s tasks are likely centered around managing and resolving physical problems, rather than planning or policy-making.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Based on the relatively small number of words extracted with the EMI/PMI approach, the LLM provides a surprisingly accurate and highly targeted description of each department’s operational footprint.</p>
 </section>
 </section>
 </section>
