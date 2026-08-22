@@ -74,14 +74,16 @@ By applying Data Science and Operations Research methods to the 2024 dataset (24
 
 **The Right-Skew Flaw & Organizational Routing**: Service completion times are severely right-skewed and fail to fit a normal distribution even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times artificially inflates performance metrics. Using robust non-parametric testing (volume-weighted K-S test) to analyze SLA closures (@fig-sla-delta-distribution), we show that resolution compliance is predominantly dictated by *functional organizational routing*—such as the digital `queue` and task `type`—rather than circumstantial geographical constraints like `zipcode`, `ward`, or `neighborhood   (@tbl-factor-ranking, @fig-factor-ranking-lollipop). These digital routing assignments are not merely administrative tags; they dictate exactly *what* the physical task is and *who* is assigned to it. Because task type dictates the *complexity* of the physical work, *organizational routing* acts as the *structural driver of the SLA* timeline.
 
-**AI-Driven Text Analytics**: The dataset contains a massive volume of unstructured free text (closure_reason). We deployed an unsupervised AI clustering pipeline to programmatically extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into executive-ready categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are heavily enriched within specific departments (@fig-topic-factor-enrichment). However, we noted the limits of this approach: attempting to use free-text clustering to explain granular seasonal demand surges (@fig-seasonal-trends-global, @fig-seasonal-trends-department) resulted in a degraded signal, necessitating mathematical queueing analysis instead.
+**AI-Driven Text Analytics**: The dataset contains a massive volume of unstructured free text (`closure_reason`). Initially, we deployed an unsupervised AI clustering pipeline to programmatically extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into executive-ready categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are heavily enriched within specific departments (@fig-topic-factor-enrichment). However, because unsupervised AI struggles to separate true operational signals from baseline administrative noise (e.g., "arrived," "completed"), it failed to accurately map granular organizational and seasonal shifts (e.g. vocabulary associated with seasonal work in specific departements).<br>
+To overcome this, we developed a deterministic text compression pipeline (Section 2.5.2). We first utilized Expected Mutual Information (EMI) as a mathematical filter to systematically remove repetitive administrative words and isolate the dataset's core structural vocabulary (@fig-emi-distribution). We then applied Pointwise Mutual Information (PMI) to extract the exact, unique physical tasks belonging exclusively to specific departments (@tbl-pmi-departments) and seasons. In addition, by feeding only these distilled, high-signal word arrays to a local LLM, we successfully reverse-engineered highly precise, physical operational profiles (@tbl-llm-profiles). This hybrid methodology—anchoring Generative AI with rigid statistical filtering—promises transferable and interesting applications for property management databases (Section 1.4).
 
 **True Workforce Velocity (Survival Analysis)**: Standard averages suffer from survivorship bias by ignoring open tickets. Kaplan-Meier survival curves  (@fig-survival-analysis-departments) reveal how departments actually process their queues:
 
 - **Public Works (PWDx)**: Optimized for rapid triage, clearing 80–85% of tickets in 48–72 hours.
-- **Baseline (BTDT, INFO, ISD)**: Clear 75% of tickets in a week, followed by a steady, predictable burn-down rate.
-- **Parks & Recreation (PARK)**: Exhibits a structural bottleneck. The curve flatlines, with roughly 20% of tickets effectively abandoned past the 60-day mark.
 
+- **Baseline (BTDT, INFO, ISD)**: Clear 75% of tickets in a week, followed by a steady, predictable burn-down rate.
+
+- **Parks & Recreation (PARK)**: Exhibits a structural bottleneck. The curve flatlines, with roughly 20% of tickets effectively abandoned past the 60-day mark.<br>
 To complement survival analysis and identify key resolution factors, we utilized Cox Proportional Hazards modeling. (@fig-cox-regression-model-adjusted) shows that PWDx operates at nearly double the baseline speed, while PARK faces a 35% speed deficit. Furthermore, manual intake (constituent phone calls) introduces heavy administrative friction, slowing resolution pipelines by roughly 22%.
 
 **Queueing Dynamics & Budget Cycles**: Queueing analysis is different than survival analysis because it is based on resolution rates: it measures system responsiveness (@fig-queue-velocity-analysis). PWDx and INFO run highly reactive models with zero structural slack, absorbing immediate shocks and resetting quickly. Conversely, PARK operates in continuous structural instability for the first six months of the year, lacking baseline daily capacity. Their massive queue correction aligns perfectly with the July 1st start of the municipal Fiscal Year, strongly suggesting a structural reliance on a seasonal budget or workforce unlock. Additionally, a sudden 1,500-ticket closure event in Transportation (BTDT) points to a database batch-closure artifact rather than human operational velocity.
@@ -92,23 +94,29 @@ To complement survival analysis and identify key resolution factors, we utilized
 
 While this report leverages a municipal dataset, the mathematical framework is partly transferable to large-scale property maintenance. Decentralized real estate portfolios face similar structural challenges regarding resource allocation, physical dependencies, and workforce capacity. For example:
 
-**Queueing Theory & Labor Scaling**: Comparing the queue velocity of different geographic property subsets allows directors to identify if specific on-site maintenance teams are structurally overwhelmed, ensuring labor is scaled to match actual inbound tenant demand rather than arbitrary building counts.
+- **Queueing Theory & Labor Scaling**: Comparing the queue velocity of different geographic property subsets allows directors to identify if specific on-site maintenance teams are structurally overwhelmed, ensuring labor is scaled to match actual inbound tenant demand rather than arbitrary building counts.
 
-**Survival Analysis & Regulatory Readiness**: Probabilistic modeling via Kaplan-Meier and Cox Hazards can track the resolution of complex capital repairs versus routine maintenance, ensuring critical safety issues are resolved well before they trigger regulatory scoring deductions (such as inspection breaches).
+- **Survival Analysis & Regulatory Readiness**: Probabilistic modeling via Kaplan-Meier and Cox Hazards can track the resolution of complex capital repairs versus routine maintenance, ensuring critical safety issues are resolved well before they trigger regulatory scoring deductions (such as inspection breaches).
 
-**Spatial Autocorrelation for Logistical Friction**: Just as municipal infrastructure creates chokepoints, travel time between scattered-site properties introduces massive logistical friction. Spatial analysis mathematically isolates which buildings suffer from delayed service maybe due to their geographic locations.
+- **Spatial Autocorrelation for Logistical Friction**: Just as municipal infrastructure creates chokepoints, travel time between scattered-site properties introduces massive logistical friction. Spatial analysis mathematically isolates which buildings suffer from delayed service maybe due to their geographic locations.
 
-**AI Text Analytics for Asset Lifecycles**: Unsupervised clustering of unstructured tenant work orders can map hidden operational task dependencies, flag behavioral-driven organizational bottlenecks, and preemptively identify systemic asset failures across a portfolio.
+- **Text Analytics & Generative AI**: Unsupervised clustering of tenant work orders can provide broad thematic overviews, but applying the deterministic text compression pipeline (EMI/PMI) functions as a universal contrast engine capable of extracting highly targeted, granular intelligence. By altering the mathematical partition within a maintenance database, this framework unlocks the following potential applications:
+
+  - **Technician & Crew Profiling**: Partitioning text data by maintenance staff mathematically isolates the distinct operational footprint of specific technicians, and might highlight specialized skill sets, pinpoint training gaps, or reveal differing behavioral approaches to resolving identical maintenance issues.
+  
+  - **Regulatory Risk & Inspection Modeling**: Partitioning properties by historical regulatory outcomes isolates the exact semantic vocabulary that precedes failed regulatory standards (e.g., NSPIRE). This might map structural maintenance dependencies, acting as a direct empirical input for models that attempt to predict inspection scores.
 
 Ultimately, applying Data Science—specifically the descriptive and diagnostic analytics branches of Operations Research—to service request databases extracts operational intelligence, moving beyond basic dashboards to reveal true workforce capacity and structural bottlenecks.
 
-However, extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires an iterative, analytical detective work that relies on three core methodological pillars:
+## 1.5 The Need for a Human Expert
 
-**Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
+Extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires an iterative, analytical detective work that relies on three core methodological pillars:
 
-**Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth and the right statistical models to use requires an exploratory analytical process that generalized software cannot fully automate.
+- **Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
 
-**Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
+- **Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth and the right statistical models to use requires an exploratory analytical process that generalized software cannot fully automate. In general, it is an iterative process that involves trial-and-error steps.
+
+- **Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
 
 This statistically rigorous and advanced detective work is detailed in the next section.
 
@@ -1494,14 +1502,191 @@ ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = 
   )
 ```
 
-### 2.6.3 The Limits of Unsupervised NLP on Seasonal Surges
+### 2.6.3 Extracting Seasonal Vocabulary Signatures
 
-Re-applying the AI text classification pipeline from the previous section to diagnose these highly specific seasonal trends failed to produce statistically valid results.
+Initially, we attempted to evaluate temporal shifts by directly feeding raw seasonal ticket data of into unsupervised AI models. However, this direct approach failed to yield meaningful results. Because these algorithms evaluate the entire corpus simultaneously, the baseline administrative noise (e.g., "arrived," "completed," "spoke") that remains constant year-round mathematically drowned out the underlying seasonal operational signals.To solve this, we repurposed the deterministic text compression pipeline (EMI/PMI) by altering the categorical partition. Rather than partitioning the data by organizational boundaries, we partitioned a single department's historical data by time ($C = Season$).
 
-While the unsupervised model successfully identified global operational bottlenecks, slicing the unstructured text into department-and-month-specific windows severely degraded the signal-to-noise ratio. At this granular level, the AI clusters were overwhelmed by generic administrative shorthand rather than distinct physical phenomena.
+```{r}
+#| label: workflow-seasonal-scripts
+#| eval: false
+#| echo: false
+# ==============================================================================
+# Workflow Tracking: 
+# The interactive table and LLM outputs below are generated via:
+# source("R/extract_seasonal_pmi.R")
+# source("R/generalized_seasonal_pipeline.R")
+# ==============================================================================
+```
 
-However, while text analytics provides critical context for what is breaking down, it fundamentally cannot measure how fast the breakdown occurs. To truly understand workforce capacity and quantify how these seasonal surges alter resolution speeds, we must shift from descriptive categorization to mathematical dynamics. The next phases of this diagnostic deploy survival analysis and queueing theory to explicitly measure true workforce velocity.
+#### 2.6.3.1 Isolating Seasonal Vocabulary for Public Works (`PWDx`)
 
+By isolating the Public Works (PWDx) department and applying the seasonal partition, the EMI algorithm successfully vaporized the year-round administrative noise. We then calculated the Pointwise Mutual Information (PMI) to isolate words mathematically drawn to specific seasons.The distribution of these positive PMI scores (@fig-seasonal-pmi) reveals a strict mathematical constraint of Information Theory. The equation for PMI is:
+$$PMI(w, c) = \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
+If a word is 100% exclusive to a single season, the joint probability $P(w, c)$ equals the word probability $P(w)$, simplifying the equation to $\log_2(1 / P(c))$. Because ticket volume is roughly balanced across the four seasons ($P(c) \approx 0.25$), the mathematical ceiling for PMI in this partition is strictly $\approx 2.0$.Notice the far-right edge of the Winter facet. The massive upward spike at the mathematical maximum indicates a dense cluster of vocabulary that is entirely exclusive to the winter months, providing a mathematically perfect operational signal.
+
+```{r}
+#| label: fig-seasonal-pmi
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-cap: "Distribution of positive PMI scores for PWDx by season. Notice the strict mathematical ceiling near 2.0, representing words that are 100% exclusive to a single season."
+
+library(readr)
+library(dplyr)
+library(tidytext)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+
+boston_data <- read_csv("../data/boston_clean.csv", show_col_types = FALSE)
+
+prep_data <- boston_data %>%
+  filter(department == "PWDx", !is.na(closure_reason), !is.na(open_dt)) %>%
+  mutate(
+    month_num = month(open_dt),
+    season = case_when(
+      month_num %in% c(12, 1, 2) ~ "Winter",
+      month_num %in% c(3, 4, 5)  ~ "Spring",
+      month_num %in% c(6, 7, 8)  ~ "Summer",
+      month_num %in% c(9, 10, 11) ~ "Fall"
+    ),
+    season = factor(season, levels = c("Winter", "Spring", "Summer", "Fall"))
+  )
+
+tokens <- prep_data %>%
+  unnest_tokens(word, closure_reason) %>%
+  filter(str_detect(word, "^[a-z]+$")) %>%
+  anti_join(stop_words, by = "word")
+
+N_total <- nrow(tokens)
+prob_season <- tokens %>% count(season, name = "N_c") %>% mutate(P_c = N_c / N_total)
+prob_word <- tokens %>% count(word, name = "N_w") %>% filter(N_w >= 10) %>% mutate(P_w = N_w / N_total)
+
+mi_data <- tokens %>%
+  semi_join(prob_word, by = "word") %>%
+  count(word, season, name = "N_wc") %>%
+  mutate(P_wc = N_wc / N_total) %>%
+  inner_join(prob_season, by = "season") %>%
+  inner_join(prob_word, by = "word") %>%
+  mutate(
+    pmi = log2(P_wc / (P_w * P_c)),
+    emi_component = (P_wc) * pmi 
+  )
+
+word_emi <- mi_data %>% group_by(word) %>% summarise(emi = sum(emi_component), .groups = "drop")
+
+plot_data <- mi_data %>%
+  inner_join(word_emi, by = "word") %>%
+  filter(emi > 0, pmi > 0)
+
+ggplot(plot_data, aes(x = pmi, fill = season)) +
+  geom_histogram(bins = 40, color = "black", linewidth = 0.2, alpha = 0.8) +
+  facet_wrap(~ season, scales = "free_y", ncol = 2) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 6)) +
+  scale_y_continuous(trans = "log1p", breaks = c(0, 1, 10, 100, 1000), labels = scales::comma) +
+  theme_minimal(base_size = 13) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "The Signal Filter: Pointwise Mutual Information by Season",
+    subtitle = "Inspecting the right tail for structural signal density.",
+    x = "Pointwise Mutual Information (Bits)",
+    y = "Number of Words (log1p scale)"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "none"
+  )
+```
+
+The interactive table @tbl-pwdx-seasonal-all provides the extracted seasonal vocabulary for the Public Works department `PWDx`.
+
+```{r}
+#| label: tbl-pwdx-seasonal-all
+#| echo: false
+#| warning: false
+#| message: false
+
+library(DT)
+library(readr)
+
+# Load the comprehensive seasonal PMI data
+seasonal_all <- read_csv("../data/PWDx_seasonal_pmi_all.csv", show_col_types = FALSE)
+
+# Generate the interactive DataTable
+datatable(
+  seasonal_all,
+  rownames = FALSE,
+  class = 'display compact',
+  caption = "Comprehensive Positive PMI Vocabulary by Season (PWDx)",
+  options = list(
+    pageLength = 20,       
+    scrollX = TRUE,        
+    scrollY = "580px",     
+    dom = 'ftip'
+  )
+) %>%
+  formatStyle(columns = names(seasonal_all), fontSize = '13px')
+```
+
+#### 2.6.3.2 Vocabulary Interpretation via LLM (Ollama)
+
+To translate these mathematical vectors into operational insights, we conducted a blind test utilizing a local Large Language Model (LLM). The top 30 structural words ($n=30$) for each season were fed to the LLM without informing the model that the tokens belonged to a Public Works department. 
+
+To evaluate the stability of the generative translation, the exact same prompt and parameters were executed twice (@tbl-llm-seasonal-profiles-1 and @tbl-llm-seasonal-profiles-2).
+
+```{r}
+#| label: tbl-llm-seasonal-profiles-1
+#| tbl-cap: "Iteration 1: Generative Translation of Top 30 Seasonal PMI Tokens (PWDx)"
+#| echo: false
+#| warning: false
+#| message: false
+
+library(readr)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+llm_call_1 <- read_csv("../data/PWDx_seasonal_llm_profiles_top30_call1.csv", show_col_types = FALSE)
+
+kable(llm_call_1, format = "html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
+  column_spec(1, bold = TRUE, width = "15%") %>%
+  column_spec(2, width = "85%")
+```
+
+```{r}
+#| label: tbl-llm-seasonal-profiles-2
+#| tbl-cap: "Iteration 2: Generative Translation of Top 30 Seasonal PMI Tokens (PWDx)"
+#| echo: false
+#| warning: false
+#| message: false
+
+library(readr)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+llm_call_2 <- read_csv("../data/PWDx_seasonal_llm_profiles_top30_call2.csv", show_col_types = FALSE)
+
+kable(llm_call_2, format = "html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
+  column_spec(1, bold = TRUE, width = "15%") %>%
+  column_spec(2, width = "85%")
+```
+
+By comparing the two iterations, we can directly observe both the deterministic power of the pipeline and the inherent vulnerabilities of Generative AI.
+
+For three of the four seasons (Winter, Spring, Summer), the LLM outputs are nearly identical across both iterations. Because the high-PMI words extracted for these seasons were concrete physical nouns (e.g., plow, salt, icy, weed, resurface), the dense structural signals severely constrained the LLM's probability matrix. It was forced to produce highly accurate, stable translations of physical reality regardless of its probabilistic nature.
+
+However, the Fall translation reveals a critical dynamic: semantic bleed when an AI is exposed to a mixed informational vector.
+
+When inspecting the underlying mathematical array for Fall (see @tbl-pwdx-seasonal-all), the physical nouns (sweepers, machinery) are heavily diluted by a dense cluster of behavioral adjectives (genuinely, challenging, frustrating, prompt, feedback, eager).
+
+Because LLMs function as narrative synthesis engines, they attempt to weave all provided tokens into a cohesive story. Across both iterations, rather than isolating the physical work, the model awkwardly merged the structural and behavioral tokens into a bizarre, anthropomorphized hybrid. It hallucinated a street sweeping and machinery crew focused on "recognizing the importance of minimizing frustration and staying eager" (Iteration 1), and addressing "difficulties and frustrations that may arise" (Iteration 2).
+
+This behavior serves as a vital diagnostic tool. It proves that the PMI algorithm is highly sensitive; it did not just isolate the physical shift to Fall street sweeping, but simultaneously captured a localized administrative footprint (likely a management or customer service template heavily deployed to address complaints during those months). Ultimately, this demonstrates that while AI is a powerful semantic translator, deploying it without strict mathematical boundaries and human analytical oversight forces the model to synthesize noise, inevitably yielding operational hallucinations.
 ## 2.7 Operational Reliability (Survival Analysis)
 
 While average resolution times are commonly used in municipal reporting, they suffer from a severe statistical flaw: survivorship bias. By excluding tickets that are currently open, standard averages artificially deflate the apparent resolution time of heavily backlogged departments.
