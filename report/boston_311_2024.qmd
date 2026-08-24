@@ -1,5 +1,5 @@
 ---
-title: "Data Analytics for Boston 311, year 2024"
+title: "Data Analytics Example"
 author: "Joël R. Pradines, Ph.D."
 date: today
 format:
@@ -57,37 +57,39 @@ boston_311 <- read_csv(here("data", "tmpm461rr5o.csv"))
 
 ## 1.1 Goals
 
-This report demonstrates the value of applying advanced Data Science (DS) and Operations Research (OR) methodologies to extract actionable operational intelligence from databases of service requests. Managing large-scale property portfolios—spanning hundreds of buildings and thousands of service requests—requires more than basic descriptive dashboards. Reporting metrics like average completion times or SLA (Service Level Agreement) compliance rates frequently mask bottlenecks. They obscure capital constraints, disguise inefficient resource allocation, and fail to measure true workforce capacity.
+This report illustrates the value of applying Data Science (DS) and Operations Research (OR) methodologies to extract operational intelligence from service request databases. Managing large-scale property portfolios—spanning hundreds of buildings and thousands of service requests—requires more than descriptive dashboards. Reporting metrics like average completion times or SLA (Service Level Agreement) compliance rates frequently mask underlying bottlenecks. Instead, deeper analysis of this data can shed light on these bottlenecks and identify targeted opportunities to improve service delivery.
 
 ## 1.2 The Example Dataset (Boston 311)
 
-To demonstrate the application and value of these methodologies, this report utilizes the publicly available Boston 311 (Year 2024) dataset as an applied proxy.
-
-Boston’s geographic districts and digital queues serve as a practical analog for decentralized property management. Just as a real estate portfolio is divided into building subsets managed by local teams, the city's workload is distributed across distinct neighborhoods. By treating constituent requests as tenant service orders, this document provides a demonstrative case study. While every new dataset is unique and requires its own custom detective work, this report illustrates how applying advanced analytics uncovers local bottlenecks, evaluates geographic equity, and models workforce dynamics.
+To demonstrate the application of these methodologies, this report utilizes the publicly available Boston 311 (Year 2024) dataset as an applied proxy. Boston’s geographic districts and digital queues serve as a practical analog for decentralized property management. Just as a real estate portfolio is divided into building subsets managed by local teams, the city's workload is distributed across distinct neighborhoods. By treating constituent requests as tenant service orders, this dataset provides a relevant case study.
 
 ## 1.3 Key findings
 
-By applying Data Science and Operations Research methods to the 2024 dataset (242,033 closed records and 40,802 open records), we isolated key operational drivers of municipal service. Standard reporting metrics frequently fail in maintenance environments; this analysis relies on robust, non-parametric statistics and machine learning to correct those flaws and uncover the following structural insights:
+By applying Data Science and Operations Research methods to the 2024 dataset (242,033 closed records and 40,802 open records), we isolated operational drivers of municipal service. Because standard reporting metrics can be misleading in maintenance environments, this analysis relies on robust, non-parametric statistics and machine learning to address these limitations and uncover the following insights:
 
-**Exogenous Shocks & Cumulative Backlogs**: Visualizing unresolved tickets revealed backlog peaks at 60 and 170 days (@fig-open-tickets-distribution). Because visual peaks can be artifacts of data binning, we mathematically confirmed their existence using the robust non-parametric Hartigan’s Dip Test, yielding an effect size and p-value that definitively ruled out random chance (@fig-robust-binning). Cross-referencing these spikes by department proved they were not general trends, but related to collapses of the Transportation Department's queue (@fig-open-tickets-by-month). These surges align with known severe infrastructure shocks in 2024: the Sumner Tunnel Restoration Project (June) and the Orange Line shutdown (October). 
+**Major Disruptions & Cumulative Backlogs**: Visualizing unresolved tickets revealed backlog peaks at 60 and 170 days (@fig-open-tickets-distribution). Because visual peaks can be artifacts of data binning, we confirmed their existence using the non-parametric *Hartigan’s Dip Test*, yielding an effect size and p-value that ruled out random chance (@fig-robust-binning). Cross-referencing these spikes by `department` showed they were not general trends, but instead localized to bottlenecks in the Transportation Department's (`BTD`) queue (@fig-open-tickets-by-month). These surges align with major infrastructure events in 2024: the Sumner Tunnel Restoration Project (June) and the Orange Line shutdown (October).
 
-**The Right-Skew Flaw & Organizational Routing**: Service completion times are severely right-skewed and fail to fit a normal distribution even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times artificially inflates performance metrics. Using robust non-parametric testing (volume-weighted K-S test) to analyze SLA closures (@fig-sla-delta-distribution), we show that resolution compliance is predominantly dictated by *functional organizational routing*—such as the digital `queue` and task `type`—rather than circumstantial geographical constraints like `zipcode`, `ward`, or `neighborhood   (@tbl-factor-ranking, @fig-factor-ranking-lollipop). These digital routing assignments are not merely administrative tags; they dictate exactly *what* the physical task is and *who* is assigned to it. Because task type dictates the *complexity* of the physical work, *organizational routing* acts as the *structural driver of the SLA* timeline.
+**The Right-Skew Flaw & Organizational Routing**: Service completion times are right-skewed and do not fit a normal distribution, even after logarithmic transformation (@fig-resolution-density-log). Consequently, relying on average (mean) completion times distorts performance metrics. Using a volume-weighted K-S test to analyze *Service Level Agreement (SLA)* closures (@fig-sla-delta-distribution), results indicate that resolution compliance is more associated with functional organizational routing—such as the digital `queue` and task type—than with geographic factors like `zipcode`, `ward`, or `neighborhood` (@tbl-factor-ranking, @fig-factor-ranking-lollipop). These digital routing assignments are not just administrative tags; they define the physical task and the assigned personnel. Because task type reflects the complexity of the work, organizational routing functions as the primary structural driver of SLA compliance.
 
-**AI-Driven Text Analytics**: The dataset contains a massive volume of unstructured free text (`closure_reason`). Initially, we deployed an unsupervised AI clustering pipeline to programmatically extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into executive-ready categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are heavily enriched within specific departments (@fig-topic-factor-enrichment). However, because unsupervised AI struggles to separate true operational signals from baseline administrative noise (e.g., "arrived," "completed"), it failed to accurately map granular organizational and seasonal shifts (e.g. vocabulary associated with seasonal work in specific departements).<br>
-To overcome this, we developed a deterministic text compression pipeline (Section 2.5.2). We first utilized Expected Mutual Information (EMI) as a mathematical filter to systematically remove repetitive administrative words and isolate the dataset's core structural vocabulary (@fig-emi-distribution). We then applied Pointwise Mutual Information (PMI) to extract the exact, unique physical tasks belonging exclusively to specific departments (@tbl-pmi-departments) and seasons. In addition, by feeding only these distilled, high-signal word arrays to a local LLM, we successfully reverse-engineered highly precise, physical operational profiles (@tbl-llm-profiles). This hybrid methodology—anchoring Generative AI with rigid statistical filtering—promises transferable and interesting applications for property management databases (Section 1.4).
+**AI-Driven Text Analytics**: The dataset contains a large volume of unstructured free text (`closure_reason`). Initially, we deployed an unsupervised AI clustering pipeline to extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into broader thematic categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are concentrated within specific departments (@fig-topic-factor-enrichment). However, because unsupervised AI struggles to separate operational signals from administrative noise (e.g., "arrived," "completed"), it did not accurately map granular organizational and seasonal shifts.
 
-**True Workforce Velocity (Survival Analysis)**: Standard averages suffer from survivorship bias by ignoring open tickets. Kaplan-Meier survival curves  (@fig-survival-analysis-departments) reveal how departments actually process their queues:
+To address this, we developed a deterministic text compression pipeline (Section 2.5.2). We utilized *Expected Mutual Information (EMI)* as a mathematical filter to remove repetitive administrative words and isolate the dataset's core structural vocabulary (@fig-emi-distribution). We then applied *Pointwise Mutual Information (PMI)* to extract the vocabulary specific to individual departments (@tbl-pmi-departments) and seasons. Direct human inspection of these filtered word arrays provides immediate and clear operational insight without the need for further AI processing.
 
-- **Public Works (PWDx)**: Optimized for rapid triage, clearing 80–85% of tickets in 48–72 hours.
+While feeding these isolated arrays to a local LLM can generate concise physical operational profiles (@tbl-llm-profiles), this final generative step requires strict analytical oversight. The LLM produces stable, accurate translations only when constrained by concrete, task-oriented nouns with large PMI values. If the extracted vocabulary contains abstract or behavioral terms, the model exhibits generative volatility, synthesizing conflicting narratives across identical prompts (@tbl-llm-seasonal-profiles-1, @tbl-llm-seasonal-profiles-2). This hybrid methodology—anchoring Generative AI with statistical filtering and human expertise—promises transferable and interesting applications for property management databases (Section 1.4).
 
-- **Baseline (BTDT, INFO, ISD)**: Clear 75% of tickets in a week, followed by a steady, predictable burn-down rate.
+**Workforce Velocity (Survival Analysis)**: Standard average completion times suffer from survivorship bias because they only account for resolved tickets, ignoring the aging backlog of open requests. To provide a more accurate measure of true workforce velocity, we applied Kaplan-Meier survival curves (@fig-survival-analysis-departments) to model how departments process their entire queues over time:
 
-- **Parks & Recreation (PARK)**: Exhibits a structural bottleneck. The curve flatlines, with roughly 20% of tickets effectively abandoned past the 60-day mark.<br>
-To complement survival analysis and identify key resolution factors, we utilized Cox Proportional Hazards modeling. (@fig-cox-regression-model-adjusted) shows that PWDx operates at nearly double the baseline speed, while PARK faces a 35% speed deficit. Furthermore, manual intake (constituent phone calls) introduces heavy administrative friction, slowing resolution pipelines by roughly 22%.
+- *Public Works (`PWDx`)*: Demonstrates a rapid triage model, clearing 80–85% of tickets within 48 to 72 hours.
 
-**Queueing Dynamics & Budget Cycles**: Queueing analysis is different than survival analysis because it is based on resolution rates: it measures system responsiveness (@fig-queue-velocity-analysis). PWDx and INFO run highly reactive models with zero structural slack, absorbing immediate shocks and resetting quickly. Conversely, PARK operates in continuous structural instability for the first six months of the year, lacking baseline daily capacity. Their massive queue correction aligns perfectly with the July 1st start of the municipal Fiscal Year, strongly suggesting a structural reliance on a seasonal budget or workforce unlock. Additionally, a sudden 1,500-ticket closure event in Transportation (BTDT) points to a database batch-closure artifact rather than human operational velocity.
+- *Baseline (`BTDT`, `INFO`, `ISD`)*: Clears approximately 75% of tickets within a week, followed by a steady resolution rate for the remainder.
 
-**Isolating Zones of Systemic Neglect**: A common statistical fallacy is assuming geographic equity exists just because flat geographical categories (like zip codes or wards) yield small effect sizes compared to organizational drivers. Categorical bins inherently destroy physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the LISA analysis mathematically maps structural inequality (@fig-spatial-equity-lisa). It identifies three distinct "High-High" clusters of systemic neglect that are geographically severed from the city's central core: Allston-Brighton (Western), East Boston (Northeast), and Charlestown (Northern). Exceptionally prompt service ("Low-Low") is heavily clustered in the downtown municipal core.
+- *Parks & Recreation (`PARK`)*: Exhibits a structural bottleneck. The survival curve flatlines, with roughly 20% of tickets remaining unresolved past the 60-day mark.
+
+To complement the Kaplan-Meier estimates and isolate specific factors influencing resolution speed, we utilized Cox Proportional Hazards modeling. The adjusted model (@fig-cox-regression-model-adjusted) indicates that `PWDx` operates at nearly double the baseline speed, whereas `PARK` operates at a 35% deficit. Additionally, manual ticket intake (constituent phone calls, `INFO`) introduces administrative friction, slowing the resolution pipeline by approximately 22% compared to digital submissions.
+
+**Queueing Dynamics & Budget Cycles**: Unlike survival analysis, which tracks the aging of individual tickets, queueing analysis measures overall system responsiveness by tracking input versus resolution rates (@fig-queue-velocity-analysis). The data shows that `PWDx` and `INFO` operate reactive systems, managing sudden volume spikes and recovering quickly. Conversely, `PARK` exhibits queue instability during the first six months of the year, accumulating a consistent backlog due to a deficit in daily capacity. A significant queue reduction in July aligns with the start of the municipal Fiscal Year, suggesting a reliance on seasonal budget allocations or temporary workforce expansion. Additionally, a single-day 1,500-ticket closure event in the Transportation Department (`BTD`) indicates an administrative batch-processing artifact rather than physical task completion.
+
+**Spatial Autocorrelation & Logistical Friction**: While flat geographical categories (such as zip codes or wards) show relatively small effect sizes compared to organizational routing, relying solely on categorical bins can obscure underlying physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the the *Local Indicators of Spatial Association (LISA)* analysis maps localized variations in service times (@fig-spatial-equity-lisa). The model identifies three "High-High" clusters (areas with elevated completion times) located further from the city's central core: *Allston-Brighton*, *East Boston*, and *Charlestown*. This pattern indicates that physical distance and infrastructure chokepoints introduce logistical friction for field teams dispatching to these neighborhoods. Conversely, faster resolution times ("Low-Low" clusters) are concentrated in the downtown core, likely reflecting the operational efficiency of proximity to centralized staging areas.
 
 ## 1.4 Potential Transferability to Property Management
 
@@ -105,25 +107,29 @@ While this report leverages a municipal dataset, the mathematical framework is p
   
   - **Regulatory Risk & Inspection Modeling**: Partitioning properties by historical regulatory outcomes isolates the exact semantic vocabulary that precedes failed regulatory standards (e.g., NSPIRE). This might map structural maintenance dependencies, acting as a direct empirical input for models that attempt to predict inspection scores.
 
+- **Workflow Dependencies & Administrative Friction**: Analyzing service metadata can reveal non-trivial operational dependencies that standard reporting misses. For example, this report demonstrated how the initial method of ticket intake (manual constituent phone calls handled by `INFO` versus direct digital submissions) introduces administrative friction that slows down downstream physical resolution times by roughly 22%, highlighting how digital bottlenecks impact field workflows.
+
+- **Administrative Cycles & Capacity Dependencies**: Analytics can uncover how physical field workflows are dependent on non-physical administrative cycles. For example, queueing analysis in this report revealed that the `PARK` department lacks baseline daily capacity and instead rely on the July 1st start of the municipal Fiscal Year [(Boston.gov)](https://www.boston.gov/departments/city-council/fy2027-city-council-legislative-budget-review) to fund the workforce unlocks necessary to clear their accumulated backlogs.
+
 Ultimately, applying Data Science—specifically the descriptive and diagnostic analytics branches of Operations Research—to service request databases extracts operational intelligence, moving beyond basic dashboards to reveal true workforce capacity and structural bottlenecks.
 
 ## 1.5 The Need for a Human Expert
 
-Extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires an iterative, analytical detective work that relies on three core methodological pillars:
+Extracting this level of intelligence is not a matter of automated, plug-and-play software. It requires iterative analytical detective work that relies on three core methodological pillars:
 
-- **Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure true performance and system stability, demanding deep statistical expertise.
+**Statistical Rigor**: Averages are mathematically flawed in maintenance data due to survivorship bias and right-skewed extremes that prohibit normal assumptions. Robust probabilistic modeling is required to measure performance and system stability, necessitating statistical expertise.
 
-- **Human Detective Work**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Uncovering the truth and the right statistical models to use requires an exploratory analytical process that generalized software cannot fully automate. In general, it is an iterative process that involves trial-and-error steps.
+**Data Forensics**: Every operational dataset contains administrative artifacts, batch-processing illusions, and mislabeled text. Identifying these anomalies and selecting the appropriate statistical models requires an exploratory process that generalized software cannot fully automate.
 
-- **Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires deep architectural understanding and practical implementation experience.
+**Advanced Programming**: Moving beyond spreadsheets to deploy multivariate regressions, spatial autocorrelation, and localized machine learning pipelines is essential. While AI-aided programming accelerates this process, it still requires architectural understanding and practical implementation experience.
 
-This statistically rigorous and advanced detective work is detailed in the next section.
+This statistically rigorous and advanced forensic work is detailed in the next section.
 
-# 2 Analytical Detective Work: Detailed Findings and Methodology.
+# 2 Analytical Forensics: Detailed Findings and Methodology.
 
 ## 2.1 Data Validation and Cohort Partitioning
 
-Data validation is the foundation of rigorous analysis. Before performing any analysis, we first implement an audit script to map column types, quantify unique values, and identify missing records (NAs). This exploratory step prevents silent failures in downstream mathematical models and generates the interactive data dictionary below.
+We first implement an audit script to map column types, quantify unique values, and identify missing records (NAs). This step prevents errors in downstream modeling and generates the interactive data dictionary below.
 
 ```{r}
 #| label: tbl-data-dictionary
@@ -157,13 +163,13 @@ datatable(
 )
 ```
 
-Following the initial audit, the work begins by partitioning the raw data into two distinct operational cohorts. This separation is necessary because open and closed tickets tell fundamentally different stories:
+Following the audit, we partition the raw data into two distinct operational cohorts. This separation is necessary because open and closed tickets represent fundamentally different system states:
 
-**Backlog Cohort (Open Requests)**: Work orders unresolved at the end of the observation period. This subset acts as a diagnostic snapshot, allowing us to evaluate system capacity and structural blockages at a fixed point in time.
+**Backlog Cohort (Open Requests)**: Work orders unresolved at the end of the observation period. This subset provides a diagnostic snapshot to evaluate system capacity and bottlenecks at a fixed point in time.
 
-**Resolved Cohort (Closed Requests)**: Work orders with a complete lifecycle. This primary dataset is utilized to evaluate historical workforce speed, logistical friction, and SLA (Service Level Agreement) compliance.
+**Resolved Cohort (Closed Requests)**: Work orders with a complete lifecycle. This dataset is used to evaluate workforce speed, logistical friction, and SLA compliance.
 
-Because raw datasets inherently contain administrative noise, we apply a filtering pipeline to the Resolved Cohort. The validation scripts calculates the resolution time (in days) for every closed ticket, isolate temporal features (month, weekday, and hour of intake) for future seasonality analysis, and purge physical impossibilities—such as negative resolution times caused by clerical data-entry errors.
+To address administrative noise in the raw data, we apply a filtering pipeline to the Resolved Cohort. The validation script calculates the resolution time (in days) for every closed ticket, isolates temporal features (month, weekday, and hour of intake) for seasonality analysis, and removes invalid entries—such as negative resolution times caused by clerical data-entry errors.
 
 ```{r}
 #| label: data-cleaning
@@ -200,13 +206,15 @@ write_csv(boston_clean, here("data", "boston_clean.csv"))
 cat("Purged", format(negative_records_count, big.mark = ","), "records with negative resolution times (data entry errors).\n")
 cat("Cleaned dataset contains", format(nrow(boston_clean), big.mark = ","), "closed records ready for analysis.\n")
 ```
-Before examining the historical speed of the Resolved Cohort, we first interrogate the Backlog Cohort to diagnose the state of the municipal queue at the close of 2024.
 
-## 2.2 Backlog Diagnostics: Identifying Exogenous Shocks
+Before examining the Resolved Cohort, we analyze the Backlog Cohort to assess the municipal queue at the close of 2024.
 
-Having partitioned the data, we first interrogate the Backlog Cohort. Analyzing unresolved requests provides a pristine example of how to stress-test a visual observation and mathematically detect major operational disturbances.
+## 2.2 Backlog Diagnostics: Detecting Major Disruptions
 
-By querying the dataset for work orders still active on December 31, 2024, the pipeline isolates over 40,000 open records and calculates the exact calendar age of each pending ticket. 
+Having partitioned the data, we first examine the Backlog Cohort. Analyzing unresolved requests demonstrates how to statistically validate visual patterns and identify major operational disruptions.
+
+By querying the dataset for work orders active on December 31, 2024, the pipeline identifies over 40,000 open records and calculates the calendar age of each pending ticket.
+
 ```{r}
 #| label: isolate-open-cases
 #| message: false
@@ -256,9 +264,11 @@ ggplot(boston_open, aes(x = days_open_at_yearend)) +
   )
 ```
 
-Visual inspection suggests distinct peaks in the backlog age, specifically around 60 days and 170 days. A required step in operational forensics is questioning whether these represent real physical phenomena (like a seasonal surge) or are statistical artifacts caused by "binning bias"—the chosen width of the histogram buckets.
+Visual inspection suggests distinct peaks in the backlog age, specifically around 60 and 170 days. A standard analytical step is determining whether these represent structural trends (such as a seasonal surge) or statistical artifacts caused by "binning bias"—the chosen width of the histogram buckets.
 
-Because our sample size is large, we can programmatically test the robustness of this observation by altering the histogram resolution. If the peaks are real, they will persist whether the data is grouped by day, week, or month.
+Because our sample size is large, we can evaluate the stability of this observation by altering the histogram resolution. If the peaks are structural, they will persist whether the data is grouped by day, week, or month.
+
+@fig-robust-binning demonstrates that the peaks at 60 and 170 days are stable and not binning artifacts. However, because this observation still relies on visual inspection, we must apply a formal statistical test to mathematically confirm their presence.
 
 ```{r}
 #| label: fig-robust-binning
@@ -303,11 +313,11 @@ boston_open %>%
   )
 ```
 
-@fig-robust-binning confirms that the peaks at 60 and 170 days are highly robust; they are not binning artifacts. Yet, this conclusion is still based on visual inspection. The next required step is deploying a statistically rigorous test to confirm peak presence mathematically.
+@fig-robust-binning demonstrates that the peaks at 60 and 170 days are stable and not binning artifacts. However, because this observation still relies on visual inspection, we must apply a formal statistical test to mathematically confirm their presence.
 
-Hartigan's Dip Test is a non-parametric test specifically designed to detect multimodality [@hartigan1985dip]. The null hypothesis ($H_0$) states that the distribution is unimodal. Mathematically, it calculates the "dip" statistic ($D$), which is the maximum vertical distance between the empirical distribution function, $F_n(x)$, and a modeled best-fitting unimodal distribution function, $U(x)$:
+Hartigan's Dip Test is a non-parametric method designed to detect multimodality [@hartigan1985dip]. The null hypothesis ($H_0$) assumes the distribution is unimodal. Mathematically, it calculates the "dip" statistic ($D$), which represents the maximum vertical distance between the empirical distribution function, $F_n(x)$, and the best-fitting unimodal distribution function, $U(x)$:
 $$D = \sup_x \vert{}F_n(x) - U(x)\vert{}$$
-If the data truly contains multiple structural waves (like the 60-day and 170-day spikes), $F_n(x)$ will deviate drastically from any possible unimodal curve and the $p$-value will approach zero, rejecting the null hypothesis.
+If the data contains multiple modes (such as the 60-day and 170-day peaks), $F_n(x)$ will deviate from any fitted unimodal curve. This deviation yields a $p$-value approaching zero, rejecting the null hypothesis.
 
 
 ```{r}
@@ -342,7 +352,7 @@ cat(final_output)
 ```
 
 
-Having established the robustness of the 60-day and 170-day spikes, we investigate their potential origins by examining monthly requests that are still open at the end of 2024 by department in @fig-open-tickets-by-month.
+Having established the stability of the 60-day and 170-day peaks, we investigate their potential origins by examining monthly requests that are still open at the end of 2024 by department in @fig-open-tickets-by-month.
 
 ```{r}
 #| label: fig-open-tickets-by-month
@@ -390,21 +400,21 @@ ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE))
 ```
 
-The visualization isolates the source of 170-day spike: the Transportation - Traffic Division backlog suddenly ballooned in June 2024 and remained saturated.
+The visualization isolates the source of the 170-day peak: the Transportation - Traffic Division backlog increased sharply in June 2024 and remained elevated.
 
-This blockage aligns perfectly with the **Sumner Tunnel Restoration Project**. MassDOT executed a full 24/7 closure from July 5 to August 5, 2024, with June dedicated to intense logistical preparation—altering traffic patterns, setting detours, and modifying transit routes. This monumental shift overwhelmed the Traffic Division's capacity, creating a localized backlog that persisted through year-end.
+This increase coincides with the *Sumner Tunnel Restoration Project*. MassDOT executed a full 24/7 closure from July 5 to August 5, 2024, with June dedicated to logistical preparation—altering traffic patterns, setting detours, and modifying transit routes. This shift exceeded the Traffic Division's baseline capacity, creating a localized backlog that persisted through year-end.
 
-Beyond the June spike, the visualization reveals a secondary wave originating in October (the ~60-day backlog). Rather than a broad seasonal shift, this was a second, distinct shock striking the exact same department.
+Beyond the June peak, the visualization reveals a secondary accumulation originating in October (the ~60-day backlog). Rather than a broad seasonal trend, this was a second, distinct disruption localized to the same department.
 
-In October 2024, the MBTA executed a multi-week **shutdown of the Orange Line subway**, replacing trains with surface-level shuttle buses. To accommodate this, the Traffic Division rapidly implemented severe street-level modifications across the southwest corridor, including removing parking spaces, creating pop-up bus lanes, and altering traffic flow.
+In October 2024, the MBTA executed a multi-week *shutdown of the Orange Line subway*, replacing trains with surface-level shuttle buses. To accommodate this, the Traffic Division implemented significant street-level modifications across the southwest corridor, including removing parking spaces, creating temporary bus lanes, and altering traffic flow.
 
-Like the summer closure, this logistical pivot overwhelmed the division. Routine neighborhood work orders were abandoned to manage the transit crisis, cementing a massive secondary backlog into the system right before the calendar year closed.
+Like the summer closure, this logistical pivot constrained the division's capacity. Routine neighborhood work orders were likely deferred to manage the transit disruption, resulting in a secondary backlog just before the close of the calendar year.
 
-## 2.3 The Right-Skew Flaw: Defining True Resolution Time
+## Right-Skewed Distributions: Defining Resolution Metrics
 
-Evaluating service resolution times using the average (mean) is a fundamental operational pitfall. Maintenance completion times are rarely normally distributed; instead, they exhibit a severe right skew. Most tasks are triaged and closed quickly, while a long tail of complex, disputed, or heavily delayed outliers remains open for months.
+Evaluating service resolution times using the arithmetic mean can misrepresent standard operational performance. Maintenance completion times are rarely normally distributed; instead, they typically exhibit a right skew. The majority of tasks are triaged and closed quickly, while a long tail of complex, disputed, or delayed outliers remains open for months.
 
-This extreme long tail artificially inflates the mean, severely distorting the true operational baseline. Consequently, the median provides the mathematically sound metric for evaluating performance and establishing Service Level Agreements (SLAs).
+This long tail shifts the mean upward, distorting the operational baseline. Consequently, the median provides a more robust central tendency metric for evaluating typical performance and establishing Service Level Agreements (SLAs).
 
 ```{r}
 #| label: fig-resolution-density-log
@@ -448,21 +458,20 @@ ggplot(boston_clean, aes(x = resolution_days)) +
   )
 ```
 
-As @fig-resolution-density-log illustrates, even after applying a logarithmic transformation, the distribution remains heavily right-skewed and multi-modal. The data formally fails to achieve log-normality. This mathematical reality definitively precludes the use of standard parametric statistical models (which assume a normal distribution of errors) and necessitates the advanced, non-parametric, and survival-based methodologies utilized in the subsequent analyses.
+As @fig-resolution-density-log illustrates, even after applying a logarithmic transformation, the distribution remains right-skewed and multi-modal. Because the data does not approximate log-normality, standard parametric statistical models (which assume normally distributed errors) are inappropriate for these data. This distributional shape necessitates the non-parametric and survival-based methodologies applied in subsequent sections.
 
-## 2.4 Isolating the Causes of Delay
+## 2.4 Isolating Factors of Delay
+To identify the variables associated with operational bottlenecks, we first establish a baseline for expected performance. In municipal and property maintenance contexts, this baseline is defined by a *Service Level Agreement (SLA)*—a standardized target time for resolving a specific request type.
 
-To determine what systematically drives operational bottlenecks, we must establish a baseline for expected performance. In both municipal and property maintenance contexts, this baseline is governed by a Service Level Agreement (SLA)—a predefined, standardized target time for resolving a specific type of request.
+Absolute resolution times lack relative context, and evaluating tickets on a binary "pass/fail" basis discards valuable variance. Instead, we calculate the *SLA Delta* (signed delay) for every closed ticket: the Actual Resolution Time minus the SLA Target Time.
 
-Absolute resolution times only tell half the story. Simply flagging tickets in a binary "pass/fail" manner strips away critical operational context. Instead, we calculate the signed delay **SLA Delta** for every closed ticket: the Actual Resolution Time minus the SLA Target Time.
+> **Methodological Note:** We measure delay in absolute time (raw days) rather than a relative percentage (SLA Delta / SLA Duration) because workforce capacity constraints and operational impacts scale in days, rather than administrative ratios. Additionally, emergency triage tasks frequently have same-day SLAs (zero-day durations), which would yield mathematically undefined values if a ratio were applied.
 
-> **Methodological Note:** We measure delay in absolute time (raw days) rather than a relative percentage (SLA Delta / SLA Duration) because physical workforce constraints and real-world impacts are experienced in actual days, not administrative ratios. Furthermore, emergency triage tasks frequently have same-day SLAs (zero-day durations), which would introduce mathematically undefined values if a ratio were applied.
-
-By analyzing the continuous distribution of this signed delay across the entire dataset, we can begin to isolate the specific variables that trigger severe system lag.
+By analyzing the continuous distribution of this SLA Delta across the dataset, we can evaluate which specific variables are most associated with extended delays.
 
 ### 2.4.1 The SLA Delta Distribution
 
-We first analyze the global distribution of the SLA Delta. A value of $0$ means the ticket was closed exactly on the deadline. Negative values indicate early closures, while positive values mathematically quantify exactly how severely a ticket was overdue.
+We first analyze the overall distribution of the SLA Delta. A value of $0$ indicates the ticket was closed exactly on the deadline. Negative values represent early closures, while positive values quantify the extent to which a ticket was overdue.
 
 ```{r}
 #| label: fig-sla-delta-distribution
@@ -500,25 +509,25 @@ ggplot(sla_delta_data, aes(x = sla_delta_days, fill = compliance_status)) +
   theme(legend.position = "top")
 ```
 
-Looking at this continuous distribution reveals the variance and behavioral clustering around the deadline. @fig-sla-delta-distribution shows a massive concentration of work orders closed immediately prior to the deadline, a sharp drop-off precisely at zero, and a right-skewed tail of overdue tickets.
+This continuous distribution reveals the variance and clustering relative to the deadline. @fig-sla-delta-distribution shows a pronounced concentration of work orders closed immediately prior to the deadline, a sharp drop-off at zero, and a right-skewed tail of overdue tickets.
 
-### 2.4.2 Factors Driving Variance in Resolution Speed
+### 2.4.2 Factors Associated with Resolution Variance
 
-To identify which factors drive early or late resolutions, we test the dependency between our categorical features (e.g., department, queue, geography,...) and the continuous SLA Delta. 
+To identify variables associated with early or delayed closures, we test the relationship between the available categorical features (e.g., department, queue, geography) and the continuous SLA Delta.Given the prevalence of outliers, traditional parametric methods (such as ANOVA) are statistically inappropriate. 
 
-Because the dataset contains outliers, traditional variance-based tests (like an ANOVA) are not statistically sound to apply. In addition, the large $N$ value guarantees that all $p$-values approach zero, and the extreme skew breaks the underlying assumptions of ordinary least squares (OLS), rendering variance explained ($R^2$) unreliable.
+Furthermore, the large sample size ($N$) causes standard $p$-values to approach zero even for negligible differences, while the heavy right skew violates the underlying assumptions of Ordinary Least Squares (OLS) regression, rendering variance explained ($R^2$) metrics unreliable.
 
-#### The Mathematical Approach: Volume-Weighted K-S Distance
+#### Volume-Weighted K-S Distance
 
-To correctly capture the true operational reality, we abandon variance and compare the **Empirical Cumulative Distribution Functions (ECDFs)** using a custom Volume-Weighted Kolmogorov-Smirnov (K-S) Statistic.
+o robustly evaluate categorical differences without relying on variance, we compare the *Empirical Cumulative Distribution Functions (ECDFs)* using a volume-weighted *Kolmogorov-Smirnov (K-S) statistic*.
 
-First, we define $F_{global}(x)$ as the ECDF of the SLA Delta for the entire city-wide portfolio. For any given factor (e.g., Department), we split the data into $K$ individual levels (subgroups). We then define $F_k(x)$ as the ECDF for a specific subgroup $k$.
+Let $F_{global}(x)$ represent the ECDF of the SLA Delta for the entire dataset. For any given categorical factor (e.g., `department`) partitioned into $K$ subgroups, let $F_k(x)$ represent the ECDF for a specific subgroup $k$.
 
-The standard K-S statistic $D_k$ measures the maximum absolute vertical distance between the subgroup's ECDF and the global ECDF:
+The standard K-S statistic, $D_k$, measures the maximum absolute vertical distance between the subgroup's ECDF and the global ECDF:
 
 $$D_k = \sup_x |F_k(x) - F_{global}(x)|$$
 
-This outputs a bounded value between $0$ (identical distributions) and $1$ (zero overlap). Because it relies purely on rank and percentiles, it is called a nonparametric statistic and it is immune to outliers.
+This yields a value bounded between $0$ (identical distributions) and $1$ (no distributional overlap). Because the K-S test evaluates empirical percentiles rather than mean variance, it is a non-parametric statistic and is therefore robust to outliers.
 
 ```{r}
 #| label: fig-ks-statistic-explanation
@@ -605,12 +614,11 @@ ggplot(plot_data, aes(x = sla_delta_days, color = Curve)) +
 
 #### Results: The Dominance of Organizational Routing
 
-To evaluate the *overall* explanatory power of the categorical factor, we must aggregate the $D_k$ scores of its levels. A simple average would mathematically equate a queue with $10$ tickets to a queue with $10,000$ tickets. Therefore, we calculate the **Volume-Weighted K-S Score** ($D_{weighted}$) by weighting each subgroup's K-S statistic by its proportional volume:
+To evaluate the overall explanatory power of a categorical factor, we aggregate the $D_k$ scores across all its subgroups. Taking a simple average would artificially inflate the influence of subgroups with very low ticket volumes. Therefore, we calculate the Volume-Weighted K-S Score ($D_{weighted}$) by weighting each subgroup's K-S statistic by its proportional ticket volume:
 
 $$D_{weighted} = \sum_{k=1}^{K} \left( \frac{n_k}{N} \right) D_k$$
 
-Where $n_k$ is the total number of work orders in subgroup $k$, and $N$ is the total volume across all subgroups. This penalizes noisy variance from tiny subgroups and rewards factors where massive subsets of work fundamentally deviate from the global baseline.
-
+Where $n_k$ is the number of work orders in subgroup $k$, and $N$ is the total volume across all subgroups. This weighting ensures the final metric reflects operational scale, dampening variance from small subgroups while capturing deviations in high-volume queues.
 
 ```{r}
 #| label: feature-dependency-ks
@@ -679,9 +687,11 @@ kable(
 )
 ```
 
-@tbl-factor-ranking reveals a distinct structural pattern: factors governing "what the work is and who does it" dominate the top of the list, while factors dictating "where the work is" sit uniformly at the bottom.
+Applying this non-parametric ranking to all organizational, task-based, and geographic features reveals the hierarchy of variance drivers displayed in @tbl-factor-ranking.
 
-To clearly visualize this emergent divide, we group these features into two macro-categories—Organizational & Task Routing versus Geographic Boundaries—and plot their K-S effect sizes in @fig-factor-ranking-lollipop.
+As the table illustrates, a distinct structural divide emerges: factors governing "what the work is and who does it" account for the highest variance, while factors dictating "where the work is" rank at the bottom.
+
+To clearly visualize this distinction, we grouped these features into two primary categories—Organizational & Task Routing versus Geographic Boundaries—and plotted their K-S effect sizes in @fig-factor-ranking-lollipop.
 
 ```{r}
 #| label: fig-factor-ranking-lollipop
@@ -729,15 +739,15 @@ ggplot(plot_ks, aes(x = Weighted_KS_Score, y = Clean_Factor, color = Macro_Categ
   )
 ```
 
-**Task & Routing Dominance**: The top drivers of distributional shift (queue, type, subject, and department) are entirely organizational and functional. Rather than describing where a ticket is, these factors dictate exactly *what* the physical task is and *who* is assigned to it. Because the *nature* of the task dictates its inherent *complexity*, required labor, and necessary equipment, it fundamentally *drives the SLA* resolution timeline. Circumstantial dimensions (like neighborhood geography) do not alter the physical reality of the work, which explains their inability to shift the timeline variance compared to the global baseline.
+**Task & Organizational Factors**: The variables exhibiting the highest distributional shift (`queue`, `type`, `subject`, and `department`) are organizational and functional. These factors dictate the nature of the physical task and the assigned workforce. Because a task's nature determines its complexity, labor requirements, and necessary equipment, it acts as the primary constraint on the resolution timeline. Geographic location does not alter the physical requirements of the work itself, explaining its minimal impact on timeline variance relative to the global baseline.
 
-**The Limitation of Administrative Boundaries**: Spatial features (precinct, ward, location_zipcode, and municipal districts) cluster uniformly at the bottom of the K-S results. It is critical not to misinterpret this low ranking as proof that geographic equity exists. Ranking at the bottom only proves that slicing data by arbitrary, massive administrative boundaries is a mathematically poor way to measure service delivery. Categorical bins destroy physical topology; they average out street-level disparities, and a dropdown variable possesses no mathematical awareness of its physical neighbors. Accurately measuring true geographic equity requires evaluating continuous spatial relationships, which is explicitly tested via spatial autocorrelation in Section 2.9.
+**Limitations of Administrative Boundaries**: Spatial features (`precinct`, `ward`, `location_zipcode`, and municipal `district`) cluster at the bottom of the K-S results. This low ranking should not be interpreted as uniform geographic performance. Rather, it demonstrates that partitioning data by large administrative boundaries is an ineffective method for measuring localized service delivery. Categorical bins obscure physical topology by averaging out street-level disparities, as discrete variables lack spatial context regarding neighboring areas. Evaluating continuous spatial relationships requires localized autocorrelation, which is applied in Section 2.9.
 
 ### 2.4.3 Result Illustration: Extremes of Organizational Routing
 
-While the K-S statistic is mathematically robust, it is an abstract metric. To directly answer the operational question—"So what?"—we can visually demonstrate exactly how these organizational routing factors dictate the timeline.
+To illustrate the practical impact of the K-S findings, we can evaluate performance across different digital queues.
 
-If organizational factors genuinely drive variance, we should see massive disparities in performance between different digital queues. To test this, we filter for high-volume queues (handling over 500 requests) and contrast the five queues with the earliest median completion times against the five queues with the most delayed median completion times.
+If organizational factors strongly influence timeline variance, substantial differences should appear between distinct workflows. To examine this, we filtered for high-volume queues (handling over 500 requests) and compared the five queues with the earliest median completion times against the five queues with the most delayed median completion times.
 
 
 ```{r}
@@ -806,30 +816,31 @@ ggplot(plot_data_extremes, aes(x = sla_delta_days, y = queue, fill = Performance
   )
 ```
 
-As @fig-variance-extremes demonstrates, the digital routing queue is not merely an administrative tag; it fundamentally dictates the lifecycle of a request.
+As @fig-variance-extremes (image_c4874d.png) illustrates, the assigned routing queue closely corresponds to the overall lifecycle of a request.
 
-The blue queues, such as rapid triage or simple administrative checks, consistently close days ahead of their scheduled deadlines with incredibly tight variance. Conversely, the red queues, representing complex or disputed workflows, suffer from massive structural delays. The middle 50% of the work in these delayed queues completely entirely falls on the right side of the deadline.
+**The early-closing queues (shown in blue)**, such as routine park maintenance and graffiti removal, consistently close well ahead of their target deadlines. 
 
-This visualization grounds the K-S test in reality: organizational routing is a massive driver of SLA timeline variance. Having exhausted the limits of these flat categorical variables, our diagnostic now pivots to an entirely different dimension of the dataset: unstructured free text. The next section explores the raw notes left by technicians to determine if additional operational signals can be extracted from outside the predefined administrative bins.
+**Conversely, the delayed queues (shown in red)**, including traffic signal engineering reviews and automated interface queues, exhibit consistent backlogs, with their interquartile ranges falling primarily past the scheduled SLA target.
 
+This comparison demonstrates the operational relevance of the K-S results: organizational routing is a primary driver of SLA timeline variance. Having evaluated categorical dimensions, the analysis next shifts to unstructured text fields, examining technician notes to evaluate whether operational signals exist outside predefined administrative bins.
 
-## 2.5 Text Analytics: Extracting Operational Signals from Unstructured Data
+## 2.5 Text Analytics: Extracting Operational Signals
 
-Unstructured free text (such as the closure_reason notes left by technicians) might contain information that flat categorical factors could miss. Extracting actionable signals from hundreds of thousands of raw text entries requires advanced Natural Language Processing (NLP).
+Unstructured free text (such as technician `closure_reason` notes) may contain operational context absent from categorical variables. Processing these text entries requires *Natural Language Processing (NLP)* techniques. 
 
-The first NLP approach we use relies on an unsupervised machine learning pipeline. This approach allows us to uncover broad operational themes driving delays.
+We first apply an unsupervised machine learning pipeline to identify broad thematic patterns associated with service delays.
 
-### 2.5.1 Unsupervised Classification via Deep Learning
+### 2.5.1 Unsupervised Classification
 
 #### 2.5.1.1 Clustering
 
-To categorize the raw text, we deployed a locally hosted deep learning pipeline. We utilized BERTopic [@grootendorst2022] combined with a Hugging Face embedding model built on the sentence-transformers architecture [@reimers2019] to group the closure notes into distinct sets. The background scripts convert unstructured text into high-dimensional numerical embeddings, which are then clustered via the HDBSCAN algorithm [@mcinnes2017hdbscan].
+To categorize the text securely without transmitting data to external APIs, we deployed a locally hosted pipeline utilizing BERTopic [@grootendorst2022] in conjunction with a Hugging Face sentence-transformers embedding model [@reimers2019]. This pipeline converts unstructured text into high-dimensional numerical embeddings, which are subsequently clustered using the HDBSCAN algorithm [@mcinnes2017hdbscan].
 
-Because of the heavy computational weight of Transformer models, this initial Python classification script was executed asynchronously. The results were saved to a static dataset, ensuring the compilation of this report remains lightweight.
+Due to the computational demands of Transformer models, the classification script was executed externally in Python. The outputs were saved as a static dataset to ensure efficient document rendering.
 
-Once the AI groups the unstructured text, we apply a mathematical text-cleaning function to extract the core themes. We utilize c-TF-IDF (Class-based Term Frequency-Inverse Document Frequency). Unlike standard TF-IDF, which evaluates individual documents, c-TF-IDF treats all tickets in a single cluster as one massive "super-document." This mathematically isolates the exact keywords that make a specific operational cluster unique compared to the global baseline.
+Following the clustering phase, we extract the core themes of each group using Class-based Term Frequency-Inverse Document Frequency (c-TF-IDF). Unlike standard TF-IDF, which evaluates individual documents, c-TF-IDF aggregates all entries within a single cluster into one consolidated document. This isolates the distinct keywords that differentiate a specific operational cluster from the overall dataset.
 
-(Note: The clustering algorithm assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern).
+> **Note**: The clustering algorithm assigns a topic ID of -1 to statistical outliers—tickets with highly unique text that do not fit into any broader operational pattern.
 
 
 ```{r}
@@ -879,9 +890,9 @@ ggplot(ai_plot_data, aes(x = n, y = reorder(clean_topic, n))) +
 
 #### 2.5.1.2 Refining Labels with Local Generative AI (Ollama)
 
-While the initial pipeline successfully groups the data using mathematical c-TF-IDF keyword strings (e.g., "Related Responds Patrols Encourage"), these raw statistical labels lack human context and readability.
+While the clustering pipeline groups the data using c-TF-IDF keyword strings (e.g., "Related Responds Patrols Encourage"), these raw statistical labels lack operational readability, as illustrated in @fig-raw-clusters.
 
-To bridge the gap between machine-readable statistics and executive-ready dashboards, we execute a 100% offline workflow using R's httr package to query a local Llama 3 instance via Ollama [@ollama2024]. This acts as an automated, localized formatting bot, applying municipal context to translate the raw statistical strings into polished operational categories.
+To translate these machine-readable statistics into interpretable categories, we utilized R's `r "httr"` package to query a locally hosted Llama 3 instance via Ollama [@ollama2024]. This step applies municipal context to synthesize the raw keyword strings into concise operational labels, maintaining data privacy by executing the generative inference entirely on-device.
 
 ```{r}
 #| label: tbl-llm-topic-translation
@@ -947,7 +958,7 @@ topic_crosswalk <- tibble(
 kable(topic_crosswalk, caption = "Automated Topic Translation via Local Llama 3 (Offline API)")
 ```
 
-With the raw statistical keywords successfully translated into intuitive operational categories, we can now reconstruct the visualization to provide a clearer view of system delays.
+With the statistical keywords mapped to operational labels (@tbl-translation, image_c559df.png), we update the visualization to examine the distribution of delayed work orders in @fig-translated-clusters.
 
 ```{r}
 #| label: fig-plot-bertopic-results-after-ollama
@@ -991,11 +1002,11 @@ ggplot(ai_plot_data_translated, aes(x = n, y = reorder(final_label, n))) +
   )
 ```
 
-#### 2.5.1.3 Departmental Topic Enrichment
+#### 2.5.1.3 Validation via Departmental Enrichment
 
-Now equipped with clean, AI-generated operational labels, we can mathematically test how these unsupervised clusters map to actual municipal departments.
+Using the synthesized operational labels, we evaluate how these unsupervised clusters map to existing municipal departments to validate the accuracy of the NLP pipeline.
 
-Using Standardized Pearson Residuals from a Chi-Square test, the heatmap in @fig-topic-factor-enrichment highlights which operational bottlenecks are statistically over-represented in specific departmental workflows.
+By calculating *Standardized Pearson Residuals* from a *Chi-Square test*, the heatmap in @fig-topic-factor-enrichment identifies which text topics are statistically over-represented in specific departments.
 
 ```{r}
 #| label: fig-topic-factor-enrichment
@@ -1059,44 +1070,46 @@ ggplot(enrichment_data, aes(x = Department, y = Topic, fill = StdResidual)) +
   )
 ```
 
-The results demonstrate clear organizational clustering: "Tree Pruning Operations" is intensely concentrated within the Parks Department (PARK), while "Cart Maintenance" heavily dominates Public Works (PWDX). Additionally, "Customer Feedback" shows a strong operational enrichment within the Mayor's Hotline (INFO). These highly localized, deep-red signals confirm that the unsupervised NLP pipeline successfully extracted distinct, department-specific operational themes directly from the unstructured closure notes.
+The results demonstrate expected organizational alignment. For example, "Tree Pruning Maintenance" is strongly associated with the Parks Department (`PARK`), while "Cart Maintenance" aligns with Public Works (`PWDX`). Additionally, "Customer Feedback" corresponds with the Mayor's Hotline (`INFO`). Rather than revealing novel operational insights, these predictable associations serve as a validation step. They confirm that the unsupervised model successfully extracted accurate, department-specific themes directly from the unstructured text, verifying the pipeline's reliability for potential downstream use of these clusters.
 
 ### 2.5.2 Structural Vocabulary Extraction
 
-While deep learning and topic modeling provided unsupervised insights, municipal data is inherently structured around strict organizational categories (e.g., Departments, Queues, Neighborhoods). To map the specific vocabulary associated with these categories, we implemented an information-theoretic pipeline.
+While topic modeling provided unsupervised insights, municipal data is inherently structured around strict administrative categories (e.g., `department`, `queue`, `neighborhood`). To map the specific vocabulary associated with these categories, we implemented an information-theoretic pipeline.
 
 #### 2.5.2.1 The EMI and PMI Mathematical Framework
 
-**Overcoming the Context Limit via Semantic Compression**
+**Addressing Context Limits via Semantic Representation**
 
-While Generative AI excels at synthesizing text, feeding the entirety of a category's work history (often exceeding 50,000 raw tickets) into a Large Language Model is computationally prohibitive and exceeds standard context windows. Conversely, relying on a random sample of tickets creates severe representational bias: high-volume, repetitive tasks (e.g., daily trash removal) will naturally crowd out highly specialized, lower-volume technical work (e.g., electrical infrastructure), yielding an incomplete vocabulary profile.
+While *Large Language Models (LLMs)* can synthesize text, processing a category's entire work history (often exceeding 50,000 raw tickets) is computationally prohibitive and exceeds standard context windows.
 
-To solve this, we utilize Expected and Pointwise Mutual Information (EMI/PMI) as a deterministic text compression algorithm. Rather than sampling raw tickets, we mathematically transform the unstructured closure notes into a concentrated array of high-signal tokens, isolating the structural vocabulary of a category.
+Conversely, relying on random sampling introduces representational bias: high-volume, repetitive tasks (e.g., daily trash removal) overshadow specialized, lower-volume technical work (e.g., electrical infrastructure), yielding an incomplete vocabulary profile.
+
+To address this, we apply *Expected* and *Pointwise Mutual Information (EMI/PMI)*. Rather than sampling raw tickets, this approach transforms unstructured closure notes into a weighted array of high-signal tokens, isolating the structural vocabulary associated with a given category.
 
 **Expected Mutual Information (EMI)**
 
-Before evaluating category-specific vocabulary, we first filter out global administrative noise. Words like "completed," "resident," or "arrived" appear frequently across all categories, offering no structural signal. To identify and remove these words, we calculate the Expected Mutual Information (EMI), which aggregates a specific word's ($w$) probability distribution across all possible categories ($c \in C$) to measure its total informational value:
+Before evaluating category-specific vocabulary, we filter out administrative noise. Terms such as "completed," "resident," or "arrived" appear uniformly across categories and offer minimal structural signal. To identify and remove these terms, we calculate Expected Mutual Information (EMI). This metric aggregates a word's ($w$) probability distribution across all categories ($c \in C$) to quantify its overall informational value:
 $$EMI(w) = \sum_{c \in C} P(c \vert{} w) \cdot \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
-Words yielding $EMI \le 0$ provide zero structural information and were removed from the global vocabulary. This mathematical filtering reduces a large, noisy universe of free text down to a core vocabulary of specific operational terms.
+Words yielding $EMI \le 0$ provide no structural information and are removed from the global vocabulary. This filtering reduces the free text to a core vocabulary of operational terms.
 
 **Pointwise Mutual Information (PMI)**
 
-After isolating the high-signal vocabulary, we utilize Pointwise Mutual Information (PMI) to measure the specific association between a single word ($w$) and a specific category ($c$). It compares the probability of the word and the category occurring together against the probability of them occurring independently:
+Following the EMI filtering, we use Pointwise Mutual Information (PMI) to measure the association between a specific word ($w$) and a specific category ($c$). PMI compares the joint probability of the word and category against the probability of their independent occurrences:
 $$PMI(w, c) = \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
 
-* $PMI > 0$: The word appears in this category more often than random chance (Attraction).
+* $PMI > 0$: The word co-occurs with the category more frequently than expected by chance (Attraction).
 
-* $PMI = 0$: The word's appearance in this category is completely random (Independence).
+* $PMI = 0$: The word's occurrence is independent of the category (Independence).
 
-* $PMI < 0$: The word appears less often than random chance (Repulsion).
+* $PMI < 0$: The word co-occurs with the category less frequently than expected by chance (Repulsion).
 
-In summary, the raw text is first reduced to high-signal words via EMI, and PMI is utilized next to isolate the vocabulary strictly associated with a specific category. This dual-step approach is applied below to the `department` factor, evaluating its $|C|=19$ distinct organizational categories.
+In summary, the raw text is first filtered for high-signal words using EMI, and PMI is subsequently applied to isolate the vocabulary associated with a specific category. This two-step approach is applied below to the `department` variable, evaluating its $\vert{}C\vert{}=19$ distinct organizational categories.
 
 #### 2.5.2.2 Categorical Feature Selection
 
-Before executing the Information Theory algorithms, the dataset's categorical variables had to be evaluated to remove variables with too few levels (target leakage) or too many levels (hyper-granularity).
+Prior to applying the mutual information framework, the dataset's categorical variables were evaluated to exclude features that introduce target leakage or hyper-granularity (which fragments the probability distribution).
 
-The tables below detail the inclusion and exclusion criteria applied to define the categorical set ($C$) for the EMI pipeline.
+@tbl-retained-factors and @tbl-excluded-factors detail the inclusion and exclusion criteria applied to define the final categorical set ($C$) for the EMI pipeline.
 
 ```{r}
 #| label: tbl-retained-factors
@@ -1159,6 +1172,7 @@ source("../R/pointwise_mutual_information.R") # (Department-specific PMI mapping
 #| label: fig-emi-distribution
 #| echo: false
 #| warning: false
+#| message: false
 #| fig-width: 12
 #| fig-height: 10
 #| fig-cap: "Distribution of Expected Mutual Information (EMI) word counts, with factors ordered from top-left to bottom-right by decreasing mean EMI."
@@ -1223,7 +1237,7 @@ ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
 
 #### 2.5.2.3 Global Signal & Functional Alignment
 
-With the structural categories defined, we applied the Expected Mutual Information (EMI) equation globally. The resulting distribution (@fig-emi-distribution) mathematically validates the text compression strategy. Plotted on a logarithmic scale, the massive density near zero indicates that the vast majority of tokens are administrative noise distributed evenly across all categories. However, the long right tail represents the surviving structural vocabulary that passed the $EMI > 0$ threshold with high information scores.
+
 
 Furthermore, the ranking of these factors by mean EMI exposes a critical structural reality about municipal operations: **the alignment of vocabulary and completion time**.
 
@@ -2255,14 +2269,8 @@ ggplot(boston_open, aes(x = days_open_at_yearend)) +
 @fig-robust-binning
 
 ```{r}
-#| label: fig-robust-binning-a
-#| fig-subcap: true
-#| layout-ncol: 3
-#| fig-width: 4
-#| fig-height: 4
+#| label: robust-binning-a
 #| eval: false
-#| warning: false
-#| fig-cap: "Histograms of age distribution of open requests at the end of 2024, with different bin sizes: (a) days, (b) weeks and (c) months."
 
 # Base plot for the first two charts mapping continuous days
 p_base <- ggplot(boston_open, aes(x = days_open_at_yearend)) +
@@ -2379,6 +2387,8 @@ ggplot(plot_data_open, aes(x = open_month, fill = subject_grouped)) +
 ```
 
 ### Section 2.3
+
+@fig-resolution-density-log
 
 ```{r}
 #| label: fig-resolution-density-log-a
