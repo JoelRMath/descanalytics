@@ -73,9 +73,9 @@ By applying Data Science and Operations Research methods to the 2024 dataset (24
 
 **AI-Driven Text Analytics**: The dataset contains a large volume of unstructured free text (`closure_reason`). Initially, we deployed an unsupervised AI clustering pipeline to extract operational bottlenecks (@fig-plot-bertopic-results), which a locally hosted LLM then translated into broader thematic categories (@tbl-llm-topic-translation, @fig-plot-bertopic-results-after-ollama). Statistical testing confirmed these AI-generated topics are concentrated within specific departments (@fig-topic-factor-enrichment). However, because unsupervised AI struggles to separate operational signals from administrative noise (e.g., "arrived," "completed"), it did not accurately map granular organizational and seasonal shifts.
 
-To address this, we developed a deterministic text compression pipeline (Section 2.5.2). We utilized *Expected Mutual Information (EMI)* as a mathematical filter to remove repetitive administrative words and isolate the dataset's core structural vocabulary (@fig-emi-distribution). We then applied *Pointwise Mutual Information (PMI)* to extract the vocabulary specific to individual departments (@tbl-pmi-departments) and seasons. Direct human inspection of these filtered word arrays provides immediate and clear operational insight without the need for further AI processing.
+To address this, we developed a deterministic text compression pipeline (Section 2.5.2). We utilized *Expected Mutual Information (EMI)* as a mathematical filter to remove repetitive administrative words and isolate the dataset's core structural vocabulary (@fig-emi-distribution). We then applied *Pointwise Mutual Information (PMI)* to extract the vocabulary specific to individual departments (@tbl-pmi-departments) and seasons for the Public Works department (@tbl-pwdx-seasonal-all). Direct human inspection of these filtered word arrays can provide immediate and clear operational insight without the need for further AI processing.
 
-While feeding these isolated arrays to a local LLM can generate concise physical operational profiles (@tbl-llm-profiles), this final generative step requires strict analytical oversight. The LLM produces stable, accurate translations only when constrained by concrete, task-oriented nouns with large PMI values. If the extracted vocabulary contains abstract or behavioral terms, the model exhibits generative volatility, synthesizing conflicting narratives across identical prompts (@tbl-llm-seasonal-profiles-1, @tbl-llm-seasonal-profiles-2). This hybrid methodology—anchoring Generative AI with statistical filtering and human expertise—promises transferable and interesting applications for property management databases (Section 1.4).
+While feeding these isolated arrays to a local LLM can generate concise physical operational profiles (@tbl-llm-profiles), this final generative step requires strict oversight. The LLM produces stable, accurate translations *only when constrained by concrete, task-oriented nouns with large PMI values*. If the extracted vocabulary contains abstract or behavioral terms, the model exhibits generative volatility, potentially synthesizing conflicting narratives across identical prompts (@tbl-llm-seasonal-profiles-1, @tbl-llm-seasonal-profiles-2). This hybrid methodology—anchoring Generative AI with statistical filtering and human expertise—promises transferable and interesting applications for property management databases (Section 1.4).
 
 **Workforce Velocity (Survival Analysis)**: Standard average completion times suffer from survivorship bias because they only account for resolved tickets, ignoring the aging backlog of open requests. To provide a more accurate measure of true workforce velocity, we applied Kaplan-Meier survival curves (@fig-survival-analysis-departments) to model how departments process their entire queues over time:
 
@@ -89,7 +89,7 @@ To complement the Kaplan-Meier estimates and isolate specific factors influencin
 
 **Queueing Dynamics & Budget Cycles**: Unlike survival analysis, which tracks the aging of individual tickets, queueing analysis measures overall system responsiveness by tracking input versus resolution rates (@fig-queue-velocity-analysis). The data shows that `PWDx` and `INFO` operate reactive systems, managing sudden volume spikes and recovering quickly. Conversely, `PARK` exhibits queue instability during the first six months of the year, accumulating a consistent backlog due to a deficit in daily capacity. A significant queue reduction in July aligns with the start of the municipal Fiscal Year, suggesting a reliance on seasonal budget allocations or temporary workforce expansion. Additionally, a single-day 1,500-ticket closure event in the Transportation Department (`BTD`) indicates an administrative batch-processing artifact rather than physical task completion.
 
-**Spatial Autocorrelation & Logistical Friction**: While flat geographical categories (such as zip codes or wards) show relatively small effect sizes compared to organizational routing, relying solely on categorical bins can obscure underlying physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the the *Local Indicators of Spatial Association (LISA)* analysis maps localized variations in service times (@fig-spatial-equity-lisa). The model identifies three "High-High" clusters (areas with elevated completion times) located further from the city's central core: *Allston-Brighton*, *East Boston*, and *Charlestown*. This pattern indicates that physical distance and infrastructure chokepoints introduce logistical friction for field teams dispatching to these neighborhoods. Conversely, faster resolution times ("Low-Low" clusters) are concentrated in the downtown core, likely reflecting the operational efficiency of proximity to centralized staging areas.
+**Spatial Autocorrelation & Logistical Friction**: While flat geographical categories (such as zip codes or wards) show relatively small effect sizes compared to organizational routing, relying solely on categorical bins can obscure underlying physical topology. By applying continuous spatial autocorrelation (@fig-spatial-equity-morans-i), the *Local Indicators of Spatial Association (LISA)* analysis maps localized variations in service times (@fig-spatial-equity-lisa). The model identifies three "High-High" clusters (areas with elevated completion times) located further from the city's central core: *Allston-Brighton*, *East Boston*, and *Charlestown*. This pattern indicates that physical distance and infrastructure chokepoints introduce logistical friction for field teams dispatching to these neighborhoods. Conversely, faster resolution times ("Low-Low" clusters) are concentrated in the downtown core, likely reflecting the operational efficiency of proximity to centralized staging areas.
 
 ## 1.4 Potential Transferability to Property Management
 
@@ -410,7 +410,7 @@ In October 2024, the MBTA executed a multi-week *shutdown of the Orange Line sub
 
 Like the summer closure, this logistical pivot constrained the division's capacity. Routine neighborhood work orders were likely deferred to manage the transit disruption, resulting in a secondary backlog just before the close of the calendar year.
 
-## Right-Skewed Distributions: Defining Resolution Metrics
+## 2.3 Right-Skewed Distributions: Defining Resolution Metrics
 
 Evaluating service resolution times using the arithmetic mean can misrepresent standard operational performance. Maintenance completion times are rarely normally distributed; instead, they typically exhibit a right skew. The majority of tasks are triaged and closed quickly, while a long tail of complex, disputed, or delayed outliers remains open for months.
 
@@ -1160,6 +1160,8 @@ kable(excluded_factors, align = c('l', 'c', 'l'))
 ```{r}
 #| label: workflow-pmi-tracking
 #| echo: false
+#| message: false
+#| warning: false
 # ==============================================================================
 # Workflow Tracking: 
 # The vocabulary data displayed below is generated by the following scripts:
@@ -1237,19 +1239,27 @@ ggplot(plot_data, aes(x = expected_mi, fill = factor)) +
 
 #### 2.5.2.3 Global Signal & Functional Alignment
 
+Applying the Expected Mutual Information (EMI) equation across the structural categories yields the distribution in @fig-emi-distribution. Plotted on a logarithmic scale, the density near zero indicates that the majority of tokens are administrative noise distributed almost evenly across all categories.
 
+In contrast, the long right tail represents the structural vocabulary that passed the $EMI > 0$ threshold with *high* information scores.
 
-Furthermore, the ranking of these factors by mean EMI exposes a critical structural reality about municipal operations: **the alignment of vocabulary and completion time**.
+Furthermore, ranking these factors by mean EMI reveals an alignment between vocabulary density and operational function.
 
-Indeed, notice that the factors with the highest information density (`queue`, `type`, `reason`, `department`) are strictly functional. They dictate exactly *what* the physical task is and *who* is assigned to it. Because the nature of the task dictates the required tools and statuses, it tightly controls the *technician's vocabulary*. Conversely, circumstantial variables like `neighborhood` and `source` do not alter the physical reality of the work, yielding a much lower semantic footprint.
+The factors with the highest mean EMI (`queue`, `type`, `reason`, `department`) are strictly functional. These variables dictate the nature of the physical task and the assigned workforce. Because the nature of the task determines the required tools and statuses, it also defines the operational vocabulary.
 
-This perfectly triangulates with the SLA variance findings established via K-S testing in Section 2.4. The functional factor levels (e.g., a specific department) that dictate the complexity of the physical work—and thereby drive the SLA timeline—are the same levels that dictate the operational vocabulary.
+In contrast, circumstantial variables like `neighborhood` and `source` do not alter the physical requirements of the work, yielding a correspondingly low semantic footprint.
+
+This finding corroborates the SLA variance results established via K-S testing in Section 2.4. The functional categories that govern the physical complexity of the work—and thereby influence the SLA timeline—are the same categories that exhibit the highest structural vocabulary mean EMI.
+
+> **Note**: Using the mean EMI rather than the median EMI is better here, as it emphasizes the contribution of large EMI values.
 
 #### 2.5.2.4 High-Signal Vocabulary by Department
 
-By executing the information-theoretic pipeline across the 19 distinct departments, we extracted the top 200 most significant words for each organizational branch.
+Applying the mutual information framework across the 19 departments isolates the top 200 highest-signal words for each department.
 
-The interactive table below displays these semantic anchors, ranked sequentially by their Pointwise Mutual Information (PMI) score. Words appearing at the top of a department's column are highly exclusive to that specific workforce, revealin the physical tasks, equipment, and administrative shorthand that define their daily operations.
+The interactive table below displays these terms, ranked by their Normalized Pointwise Mutual Information (NPMI) score. Words appearing at the top of a department's column are strongly associated with that specific workforce, indicating the physical tasks, equipment, and administrative shorthand that characterize their operations.
+
+While automated summarization of these vocabularies is explored in subsequent sections, direct human inspection of the raw PMI rankings is highly effective for theme identification. Simply reviewing the top terms in each column reveals cohesive operational clusters—such as pest control ("burrows", "baiting", "droppings") in Inspectional Services (`ISD`) or arboreal maintenance ("forestry", "canopy", "replant") in Parks and Recreation (`PARK`). Because automated generative models can introduce stochastic variability, this deterministic matrix serves as a robust, standalone tool for operational discovery.
 
 ```{r}
 #| label: tbl-pmi-departments
@@ -1302,11 +1312,11 @@ datatable(
   pmi_display,
   rownames = FALSE, 
   class = 'display compact', 
-  caption = "Top 200 Operational Words by Department (Ranked by PMI, Tie-broken by Volume)",
+  caption = "Top 200 Operational Words by Department (Ranked by NPMI, Tie-broken by Volume)",
   options = list(
     pageLength = 20,       
     scrollX = TRUE,        
-    scrollY = "580px",     
+    scrollY = "680px",     
     dom = 'ftip',          
     searchHighlight = TRUE 
   )
@@ -1316,9 +1326,9 @@ datatable(
 
 #### 2.5.2.5 Vocabulary Interpretation via Local Generative AI
 
-To provide an easily readable view of the statistically extracted vocabulary, we added a local Large Language Model (LLM) to the pipeline.
+To provide an interpretable view of the extracted vocabulary, we integrated a local Large Language Model (LLM) into the pipeline.
 
-The LLM was not used to read the raw operational tickets—an approach that often struggles with context window limitations and noise. Instead, the LLM was only fed the top 200 high-signal words extracted by the PMI algorithm, anf we forced the AI to act strictly as a semantic translator. The LLM was provided with the baseline context that it was evaluating a municipal workforce:
+Rather than processing raw operational tickets—an approach limited by context windows and noise—the LLM was restricted to the top 200 high-signal words isolated by the PMI algorithm, functioning strictly as a semantic translator. The model was initialized with a structured prompt defining its analytical role:
 
 > **Prompt** "You are a municipal operations analyst. I am providing you with a list of the top statistically significant words extracted from the 'closure notes' of a specific city department, sorted by their Pointwise Mutual Information (PMI) score. This means these words represent the highly specific, unique physical tasks and vocabulary of this department.
 Based only on these words, write a concise, 3-sentence operational profile describing exactly what this department does in the physical world. Do not invent tasks outside of this vocabulary." 
@@ -1326,8 +1336,6 @@ Based only on these words, write a concise, 3-sentence operational profile descr
 Descriptions provided by the LLM are presented in @tbl-llm-profiles.
 
 > **Note**: The Boston Police Department (BPD) profile generated below relies heavily on words related to noise and public disturbances. This is because the 311 system is explicitly reserved for non-emergency municipal issues; active crimes are routed through 911 and therefore do not appear in this dataset's vocabulary.
-
-
 
 ```{r}
 #| label: tbl-llm-profiles
@@ -1360,31 +1368,57 @@ dept_mapping <- tribble(
   "ONS_", "Neighborhood Services"
 )
 
-# Load the LLM-generated profiles
+# Load the LLM-generated profiles and raw PMI results
 llm_profiles <- read_csv("../data/department_profiles_llm.csv", show_col_types = FALSE)
+pmi_raw <- read_csv("../data/pmi_results.csv", show_col_types = FALSE)
 
-# Clean and format for display
+# 2. Calculate Vocab Volume and Median NPMI for the exact array fed to the LLM
+metrics_df <- pmi_raw %>%
+  filter(factor == "department", pmi > 0) %>%
+  group_by(level) %>%
+  arrange(desc(scaled_pmi), desc(n_wc)) %>%
+  slice_head(n = 200) %>%
+  # Count the surviving words and calculate the median
+  summarise(
+    vocab_size = n(),
+    median_npmi = sprintf("%.2f", median(scaled_pmi)), 
+    .groups = "drop"
+  )
+
+# 3. Clean and format for display
 display_profiles <- llm_profiles %>%
-  # Filter out small departments that lacked sufficient vocabulary for a profile
   filter(!grepl("Insufficient vocabulary", operational_profile, ignore.case = TRUE)) %>%
-  # Join full names
   left_join(dept_mapping, by = c("department" = "code")) %>%
-  # Format the Department column to stack the code and the full name
+  # Join the calculated metrics
+  left_join(metrics_df, by = c("department" = "level")) %>%
   mutate(
-    Department = paste0("<b>", department, "</b><br><span style='font-size:0.85em; color:gray;'>", full_name, "</span>")
+    Department = paste0(
+      "<b>", department, "</b><br>",
+      "<span style='font-size:0.85em; color:gray;'>", 
+      full_name, "<br>Words: ", vocab_size, " | Med NPMI: ", median_npmi, 
+      "</span>"
+    )
   ) %>%
   select(Department, `AI-Translated Operational Profile` = operational_profile)
 
-# Render a styled HTML table with strict column widths to enforce text wrapping
+# 4. Render a styled HTML table
 kable(display_profiles, format = "html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   column_spec(1, width = "20%") %>%
   column_spec(2, width = "80%")
 ```
 
-Based on the relatively small number of words extracted with the EMI/PMI approach, the LLM provides an accurate and highly targeted description of each department's operational footprint.
+Operating on the concise arrays generated by the EMI/PMI approach, the LLM produces targeted summaries of each department's operational footprint.
 
-The EMI/PMI/LLM pipeline utilized above can also be utilized for any partition of the tickets other than departments. In tne context of property management and analyzing the content of a database of service requests, this pipeline might enable descriptions of certain groups of properties or maintenance technicians. 
+This EMI/PMI/LLM framework can be generalized to any partitioning of the dataset. For example, within property management or service request analytics, this pipeline can automatically characterize specific property groups or maintenance technician clusters.
+
+However, this approach remains susceptible to over-interpretation when applied without *strict constraints*. As observed in certain outputs—such as misinterpreting the Mayor's Hotline (INFO) as a wildlife rescue agency due to terms like "shelter" or "quarantine"—unconstrained language models can confabulate operational scope.
+
+To ensure reliable interpretation, two safeguards must be maintained:
+
+**Sufficient PMI Magnitude**: The PMI scores for the top vocabulary must be high enough, ensuring the model is not parsing low-information noise. In @tbl-pmi-departments, each term is followed by a short representation of its PMI value, the largest possible value being 2.
+
+**Lexical Specificity**: The input vocabulary must be operational and specific. When a department handles administrative workflows rather than distinct physical tasks (such as Neighborhood Development, `DND`, where generic terms like "completed" and "resolved" dominate), the extracted tokens lack the semantic density required for accurate text generation. In such cases, human inspection of the terms and their PMI values is preferable.
 
 ## 2.6 Seasonal Demand and System Capacity
 
@@ -1455,7 +1489,9 @@ ggplot(global_summary, aes(x = created_month, y = Volume, group = Metric, color 
 
 ### 2.6.2 Departmental Micro Trends
 
-While the citywide view provides the baseline, operational failures are rarely distributed evenly. By breaking the seasonality down by the highest-volume departments, we can see how different seasonal events (e.g., winter storms vs. summer park usage) might trigger capacity thresholds across distinct municipal departments.
+Because aggregate citywide data might obscure localized bottlenecks, we break this seasonality down by the highest-volume departments (@fig-dept-stress). 
+
+Interestingly, the correlation between demand (blue) and system failure (red) varies significantly by department:
 
 ```{r}
 #| label: fig-seasonal-trends-department
@@ -1513,6 +1549,10 @@ ggplot(dept_summary, aes(x = created_month, y = Volume, group = Metric, color = 
   )
 ```
 
+**Correlated Capacity Constraints**: For departments like Transportation (`BTDT`), the Mayor's Hotline (`INFO`), and Property Management (`PROP`), missed SLAs closely track inbound volume. When demand spikes, failure rates proportionally rise, indicating rigid capacity constraints where a static workforce cannot absorb the surge.
+
+**Uncorrelated & Elastic Capacity**: Conversely, Parks and Recreation (`PARK`) and Public Works (`PWDx`) demonstrate a decoupled relationship. `PARK`, for example, absorbs a massive summer surge in ticket volume with almost no increase in missed SLAs. This points to highly elastic seasonal scaling, implying that the workforce is appropriately expanded (e.g., via seasonal summer hires) to match the expected environmental demand.
+
 ### 2.6.3 Extracting Seasonal Vocabulary Signatures
 
 Initially, we attempted to evaluate temporal shifts by directly feeding raw seasonal ticket data of into unsupervised AI models. However, this direct approach failed to yield meaningful results. Because these algorithms evaluate the entire corpus simultaneously, the baseline administrative noise (e.g., "arrived," "completed," "spoke") that remains constant year-round mathematically drowned out the underlying seasonal operational signals.To solve this, we repurposed the deterministic text compression pipeline (EMI/PMI) by altering the categorical partition. Rather than partitioning the data by organizational boundaries, we partitioned a single department's historical data by time ($C = Season$).
@@ -1531,16 +1571,22 @@ source("R/generalized_seasonal_pipeline.R")
 
 #### 2.6.3.1 Isolating Seasonal Vocabulary for Public Works (`PWDx`)
 
-By isolating the Public Works (PWDx) department and applying the seasonal partition, the EMI algorithm successfully vaporized the year-round administrative noise. We then calculated the Pointwise Mutual Information (PMI) to isolate words mathematically drawn to specific seasons.The distribution of these positive PMI scores (@fig-seasonal-pmi) reveals a strict mathematical constraint of Information Theory. The equation for PMI is:
+By isolating the Public Works (PWDx) department and applying the seasonal partition, the EMI algorithm successfully vaporized the year-round administrative noise. We then calculated the Pointwise Mutual Information (PMI) to isolate words mathematically drawn to specific seasons.
+
+The distribution of these positive PMI scores (@fig-seasonal-pmi) has a strict mathematical constraint of Information Theory. The equation for PMI is:
 $$PMI(w, c) = \log_2 \left( \frac{P(w, c)}{P(w)P(c)} \right)$$
-If a word is 100% exclusive to a single season, the joint probability $P(w, c)$ equals the word probability $P(w)$, simplifying the equation to $\log_2(1 / P(c))$. Because ticket volume is roughly balanced across the four seasons ($P(c) \approx 0.25$), the mathematical ceiling for PMI in this partition is strictly $\approx 2.0$.Notice the far-right edge of the Winter facet. The massive upward spike at the mathematical maximum indicates a dense cluster of vocabulary that is entirely exclusive to the winter months, providing a mathematically perfect operational signal.
+If a word is 100% exclusive to a single season, the joint probability $P(w, c)$ equals the word probability $P(w)$, simplifying the equation to $\log_2(1 / P(c))$. 
+
+As established in the previous capacity analysis (@fig-dept-stress), `PWDx` ticket volume is imbalanced, surging during the summer months. Because $P(c)$ varies by season, the raw mathematical ceiling for PMI fluctuates. To resolve this and allow for direct cross-seasonal comparison, we divide the raw scores by their respective theoretical maxima to calculate the Normalized PMI (NPMI). This normalization bounds the absolute maximum score at 1.0 across all four seasons.
+
+Notice the far-right edge of the Winter facet in the resulting distribution (@fig-seasonal-pmi). The pronounced upward spike hitting this 1.0 maximum indicates a cluster of vocabulary that is exclusive to the winter months, providing an isolated operational signal.
 
 ```{r}
 #| label: fig-seasonal-pmi
 #| echo: false
 #| warning: false
 #| message: false
-#| fig-cap: "Distribution of positive PMI scores for PWDx by season. Notice the strict mathematical ceiling near 2.0, representing words that are 100% exclusive to a single season."
+#| fig-cap: "Distribution of positive NPMI scores for PWDx by season. Notice the strict mathematical ceiling at 1.0, representing words that are 100% exclusive to a single season."
 
 library(readr)
 library(dplyr)
@@ -1581,6 +1627,8 @@ mi_data <- tokens %>%
   inner_join(prob_word, by = "word") %>%
   mutate(
     pmi = log2(P_wc / (P_w * P_c)),
+    max_pmi = -log2(P_c),
+    npmi = pmi / max_pmi,
     emi_component = (P_wc) * pmi 
   )
 
@@ -1588,9 +1636,9 @@ word_emi <- mi_data %>% group_by(word) %>% summarise(emi = sum(emi_component), .
 
 plot_data <- mi_data %>%
   inner_join(word_emi, by = "word") %>%
-  filter(emi > 0, pmi > 0)
+  filter(emi > 0, npmi > 0)
 
-ggplot(plot_data, aes(x = pmi, fill = season)) +
+ggplot(plot_data, aes(x = npmi, fill = season)) +
   geom_histogram(bins = 40, color = "black", linewidth = 0.2, alpha = 0.8) +
   facet_wrap(~ season, scales = "free_y", ncol = 2) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 6)) +
@@ -1598,9 +1646,9 @@ ggplot(plot_data, aes(x = pmi, fill = season)) +
   theme_minimal(base_size = 13) +
   scale_fill_brewer(palette = "Set2") +
   labs(
-    title = "The Signal Filter: Pointwise Mutual Information by Season",
+    title = "The Signal Filter: Normalized Mutual Information by Season",
     subtitle = "Inspecting the right tail for structural signal density.",
-    x = "Pointwise Mutual Information (Bits)",
+    x = "Normalized Pointwise Mutual Information",
     y = "Number of Words (log1p scale)"
   ) +
   theme(

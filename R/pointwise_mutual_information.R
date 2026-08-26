@@ -75,10 +75,13 @@ calculate_pmi_for_factor <- function(factor_name, token_data, mi_df, total_N, mi
     inner_join(category_stats %>% select(level, n_c, p_c), by = "level") %>%
     mutate(
       pmi = log2(p_wc / (p_w * p_c)),
+      max_pmi = -log2(p_c),
+      scaled_pmi = pmi / max_pmi,
       factor = factor_name
     ) %>%
-    select(factor, level, word, n_wc, n_w, n_c, pmi) %>%
-    arrange(desc(pmi))
+    filter(pmi > 0) %>%
+    select(factor, level, word, n_wc, n_w, n_c, pmi, max_pmi, scaled_pmi) %>%
+    arrange(desc(scaled_pmi))
   
   return(pmi_df)
 }
@@ -91,9 +94,9 @@ write_csv(all_pmi_results, here("data", "pmi_results.csv"))
 cat("PMI processing complete. Saved to data/pmi_results.csv\n")
 
 # ==============================================================================
-# 4. Generate Wide CSV for Excel Exploration (All 19 Depts, Top 200 Words)
+# 4. Generate Wide CSV for Excel Exploration (All 19 Depts, Top 200 Words & Scaled PMI)
 # ==============================================================================
-cat("Generating wide-format CSV for Excel exploration...\n")
+cat("Generating wide-format CSV for Excel exploration with Scaled PMI scores...\n")
 
 # Identify ALL 19 departments, ordered by overall ticket volume (n_c)
 all_deps <- all_pmi_results %>%
@@ -102,30 +105,34 @@ all_deps <- all_pmi_results %>%
   arrange(desc(n_c)) %>%
   pull(level)
 
-# Create the wide dataframe (Top 200 words per department)
+# Create the wide dataframe (Top 200 words per department, storing both word and scaled_pmi)
 department_wide <- all_pmi_results %>%
   filter(factor == "department") %>%
   group_by(level) %>%
-  # Rank by PMI first, tie-break by volume
-  arrange(desc(pmi), desc(n_wc)) %>%
-  mutate(rank = row_number()) %>%
+  # Rank by Scaled PMI first, tie-break by co-occurrence volume
+  arrange(desc(scaled_pmi), desc(n_wc)) %>%
+  mutate(
+    # Format the Scaled PMI score to two decimal places immediately
+    formatted_pmi = sprintf("%.2f", scaled_pmi),
+    # Combine word and scaled pmi score into a single string (e.g., "globe (0.97)")
+    word_with_pmi = paste0(word, " (", formatted_pmi, ")")
+  ) %>%
   slice_head(n = 200) %>% 
-  # Create a dummy index strictly for pivot_wider to align the rows
+  # Create a row index strictly for pivot_wider alignment
   mutate(row_id = row_number()) %>% 
   ungroup() %>%
-  select(row_id, level, word, rank) %>%
+  select(row_id, level, word_with_pmi) %>%
   pivot_wider(
     id_cols = row_id, 
     names_from = level,
-    values_from = c(word, rank),
-    names_glue = "{level}_{.value}"
+    values_from = word_with_pmi,
+    names_glue = "{level}_word" # Keeps the naming convention expected by your Quarto script
   ) %>%
   select(-row_id) 
 
-# Interleave the columns so each department's 'word' and 'rank' are side-by-side
-ordered_cols <- as.vector(rbind(paste0(all_deps, "_word"), paste0(all_deps, "_rank")))
-# Ensure we only select columns that exist (in case a tiny dept has < 200 words)
+# Ensure columns align with the volume-ordered department list
+ordered_cols <- paste0(all_deps, "_word")
 department_wide <- department_wide %>% select(any_of(ordered_cols))
 
 write_csv(department_wide, here("data", "department_all19_pmi_excel.csv"))
-cat("Saved wide format to data/department_all19_pmi_excel.csv\n")
+cat("Saved wide format with Scaled PMI values to data/department_all19_pmi_excel.csv\n")
