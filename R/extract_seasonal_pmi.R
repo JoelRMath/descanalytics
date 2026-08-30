@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: R/extract_seasonal_pmi.R
-# Purpose: Extract ALL positive PMI seasonal words for a department and save.
+# Purpose: Extract ALL positive NPMI seasonal words for a department and save.
 # ==============================================================================
 
 library(readr)
@@ -46,24 +46,30 @@ extract_all_seasonal_pmi <- function(target_dept) {
     inner_join(prob_word, by = "word") %>%
     mutate(
       pmi = log2(P_wc / (P_w * P_c)),
+      max_pmi = -log2(P_c),
+      npmi = pmi / max_pmi,
       emi_component = (P_wc) * pmi 
     )
   
   word_emi <- mi_data %>% group_by(word) %>% summarise(emi = sum(emi_component), .groups = "drop")
   
-  # Extract ALL words where EMI > 0 and PMI > 0
+  # Extract ALL words where EMI > 0 and PMI > 0, then format with NPMI
   all_words_df <- mi_data %>%
     inner_join(word_emi, by = "word") %>%
     filter(emi > 0, pmi > 0) %>%
     group_by(season) %>%
-    arrange(desc(pmi)) %>%
-    mutate(rank = row_number()) %>%
+    arrange(desc(npmi), desc(N_wc)) %>%
+    mutate(
+      rank = row_number(),
+      formatted_npmi = sprintf("%.2f", npmi),
+      word_with_npmi = paste0(word, " (", formatted_npmi, ")")
+    ) %>%
     ungroup()
   
-  # Pivot wider (will naturally fill with NAs for seasons with fewer words)
+  # Pivot wider using the formatted strings
   clean_table <- all_words_df %>%
-    select(season, rank, word) %>%
-    pivot_wider(names_from = season, values_from = word) %>%
+    select(season, rank, word_with_npmi) %>%
+    pivot_wider(names_from = season, values_from = word_with_npmi) %>%
     arrange(rank)
   
   csv_filename <- here("data", paste0(target_dept, "_seasonal_pmi_all.csv"))
